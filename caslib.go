@@ -5,13 +5,17 @@ import (
 	"fmt"
 )
 
-// CAS_SERVER_NAME 是默认的 CAS 服务器名称
-// 在实际使用中，只需要 UnLoadCasLibTableInMemory 对应的 表，当 Viya 可视化报表加载数据时，就会自动重载数据到内存中了
-// caslib 操作需要在 Password 认证模式下才能操作成功
+// SAS Viya CAS Management API reference:
+// https://developer.sas.com/rest-apis/casManagement
 
+// CAS_SERVER_NAME is the default shared CAS server name used by SAS Viya deployments.
 const CAS_SERVER_NAME = "cas-shared-default"
 
-// LoadCasLibTableToMemory 将某个 CAS 库的表加载到内存中
+// LoadCasLibTableToMemory loads a table from a CAS library into memory.
+//
+// casLibName and table identify the CAS library and table. replace controls whether
+// an existing in-memory table can be replaced, and scope is passed to the CAS
+// Management API state-change request.
 func (c *Client) LoadCasLibTableToMemory(ctx context.Context, casLibName, table string, replace bool, scope string) error {
 	body := map[string]any{
 		"outputCaslibName": casLibName,
@@ -34,7 +38,10 @@ func (c *Client) LoadCasLibTableToMemory(ctx context.Context, casLibName, table 
 	return nil
 }
 
-// UnLoadCasLibTableInMemory 从内存中移除某个 CAS 库的表
+// UnLoadCasLibTableInMemory unloads a table from CAS memory.
+//
+// In SAS Visual Analytics workflows, unloading a table can let reports reload
+// the latest source data the next time they access the table.
 func (c *Client) UnLoadCasLibTableInMemory(ctx context.Context, casLibName, table string) error {
 	resp, err := c.client.R().SetContext(ctx).
 		SetQueryParam("value", "unloaded").

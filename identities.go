@@ -10,7 +10,10 @@ import (
 	"go.opentelemetry.io/otel/codes"
 )
 
-// RefreshIdentitiesCache method triggers a refresh of the identities cache in Viya.
+// SAS Viya Identities API reference:
+// https://developer.sas.com/rest-apis/identities
+
+// RefreshIdentitiesCache triggers a refresh of the identities cache in SAS Viya.
 func (c *Client) RefreshIdentitiesCache(ctx context.Context) (success bool, err error) {
 	ctx, span := tracer.Start(ctx, "RefreshIdentitiesCache")
 	defer span.End()
@@ -27,6 +30,7 @@ func (c *Client) RefreshIdentitiesCache(ctx context.Context) (success bool, err 
 	return true, nil
 }
 
+// IdentitiesUsers describes a user entry returned by the SAS Viya Identities API.
 type IdentitiesUsers struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -36,8 +40,10 @@ type IdentitiesUsers struct {
 	State       string `json:"state"`
 }
 
+// IdentitiesUsersResp is a collection of SAS Viya identity users.
 type IdentitiesUsersResp = ListResponse[IdentitiesUsers]
 
+// GetIdentitiesUsers returns up to 100 SAS Viya identity users.
 func (c *Client) GetIdentitiesUsers(ctx context.Context) (identitiesUserResp IdentitiesUsersResp, err error) {
 	ctx, span := tracer.Start(ctx, "GetIdentitiesUsers")
 	defer span.End()
@@ -56,7 +62,10 @@ func (c *Client) GetIdentitiesUsers(ctx context.Context) (identitiesUserResp Ide
 
 // NOTE: 以下未经过验证，推荐通过 AD 域中的组进行控制，objectFilter 已经切换到 通过组配置了
 
-// GetIdentitiesLDAPUser method retrieves the LDAP user provider configuration.
+// GetIdentitiesLDAPUser retrieves the LDAP user provider configuration.
+//
+// The configuration service returns dynamic payloads, so the configuration is
+// represented as map[string]any.
 func (c *Client) GetIdentitiesLDAPUser(ctx context.Context) (map[string]any, error) {
 	resp, err := c.GetConfiguration(ctx, "sas.identities.providers.ldap.user")
 	if err != nil {
@@ -74,7 +83,10 @@ func (c *Client) GetIdentitiesLDAPUser(ctx context.Context) (map[string]any, err
 	return config.Items[0], nil
 }
 
-// PatchIdentitiesLDAPGroup method updates the LDAP group provider configuration.
+// PatchIdentitiesLDAPGroup updates the LDAP provider configuration with the supplied values.
+//
+// NOTE: Despite the method name, this updates the LDAP user provider configuration.
+// The name is preserved for source compatibility.
 func (c *Client) PatchIdentitiesLDAPGroup(ctx context.Context, updates map[string]any) (bool, error) {
 	// NOTE: Despite the name, this updates the LDAP user provider configuration.
 	// Keeping the name to avoid breaking external callers.
@@ -131,7 +143,7 @@ func (c *Client) PatchIdentitiesLDAPGroup(ctx context.Context, updates map[strin
 	return response.IsSuccess(), nil
 }
 
-// UpdateIdentitiesLDAPObjectFilter method updates the LDAP object filter to include only the specified usernames.
+// UpdateIdentitiesLDAPObjectFilter updates the LDAP object filter to include only the specified usernames.
 func (c *Client) UpdateIdentitiesLDAPObjectFilter(ctx context.Context, usernames []string) (bool, error) {
 	var accountNames []string
 	for _, username := range usernames {

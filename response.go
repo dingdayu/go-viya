@@ -1,5 +1,9 @@
 package viya
 
+// Link describes a hypermedia link returned by SAS Viya REST APIs.
+//
+// Many SAS Viya resources include action links such as "self", "update", or
+// "delete"; callers can use these when an API response provides the canonical URL.
 type Link struct {
 	Method string `json:"method"`
 	Rel    string `json:"rel"`
@@ -8,6 +12,11 @@ type Link struct {
 	Type   string `json:"type,omitempty"`
 }
 
+// ListResponse represents a standard SAS Viya collection response.
+//
+// Collection responses usually include paging fields, items, and links. For
+// details on SAS Viya REST API conventions, see:
+// https://developer.sas.com/docs/rest-apis/getting-started/authentication
 type ListResponse[T any] struct {
 	Version int    `json:"version"`
 	Accept  string `json:"accept"`
@@ -18,6 +27,7 @@ type ListResponse[T any] struct {
 	Links   []Link `json:"links"`
 }
 
+// ErrorResponse represents a structured SAS Viya error response.
 type ErrorResponse struct {
 	Version        int      `json:"version"`
 	Accept         string   `json:"accept,omitempty"`
@@ -30,6 +40,7 @@ type ErrorResponse struct {
 	} `json:"error,omitempty"`
 }
 
+// Error returns the most useful message from a SAS Viya error payload.
 func (e ErrorResponse) Error() string {
 	if e.Message != "" {
 		return e.Message

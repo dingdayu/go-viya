@@ -10,6 +10,13 @@ import (
 	"go.opentelemetry.io/otel/codes"
 )
 
+// SAS Viya Batch API reference:
+// https://developer.sas.com/rest-apis/batch
+
+// BatchContext describes a SAS Viya Batch execution context.
+//
+// A context defines how batch jobs are launched, including queue, resource,
+// server, and SAS option settings.
 type BatchContext struct {
 	ID                string    `json:"id"`
 	Name              string    `json:"name"`
@@ -33,8 +40,10 @@ type BatchContext struct {
 	Links             []Link    `json:"links"`
 }
 
+// BatchContextsResponse is a collection of SAS Viya Batch contexts.
 type BatchContextsResponse = ListResponse[BatchContext]
 
+// GetBatchContexts returns the available SAS Viya Batch execution contexts.
 func (c *Client) GetBatchContexts(ctx context.Context) (resp BatchContextsResponse, err error) {
 	ctx, span := tracer.Start(ctx, "GetBatchContexts")
 	defer span.End()
@@ -56,8 +65,11 @@ func (c *Client) GetBatchContexts(ctx context.Context) (resp BatchContextsRespon
 	return resp, nil
 }
 
+// BatchFileSet describes a SAS Viya Batch file set.
+//
+// File sets group input, output, list, and log files associated with batch jobs.
 type BatchFileSet struct {
-	ID string `json:"id"` // JOB_20260423_025718_331_1
+	ID string `json:"id"`
 
 	CreatedBy         string    `json:"createdBy"`
 	CreationTimeStamp time.Time `json:"creationTimeStamp"`
@@ -69,8 +81,10 @@ type BatchFileSet struct {
 	Links     []Link `json:"links"`
 }
 
+// BatchFileSetsResponse is a collection of SAS Viya Batch file sets.
 type BatchFileSetsResponse = ListResponse[BatchFileSet]
 
+// GetBatchFileSetsList returns the available SAS Viya Batch file sets.
 func (c *Client) GetBatchFileSetsList(ctx context.Context) (resp BatchFileSetsResponse, err error) {
 	ctx, span := tracer.Start(ctx, "GetBatchFileSets")
 	defer span.End()
@@ -92,6 +106,7 @@ func (c *Client) GetBatchFileSetsList(ctx context.Context) (resp BatchFileSetsRe
 	return resp, nil
 }
 
+// GetBatchFileSetsInfo returns metadata for a single SAS Viya Batch file set.
 func (c *Client) GetBatchFileSetsInfo(ctx context.Context, id string) (resp BatchFileSet, err error) {
 	ctx, span := tracer.Start(ctx, "GetBatchFileSetsInfo")
 	defer span.End()
@@ -113,6 +128,7 @@ func (c *Client) GetBatchFileSetsInfo(ctx context.Context, id string) (resp Batc
 	return resp, nil
 }
 
+// CreateBatchFileSet creates a SAS Viya Batch file set for the supplied context ID.
 func (c *Client) CreateBatchFileSet(ctx context.Context, contextId string) (resp BatchFileSet, err error) {
 	ctx, span := tracer.Start(ctx, "CreateBatchFileSet")
 	defer span.End()
@@ -138,6 +154,10 @@ func (c *Client) CreateBatchFileSet(ctx context.Context, contextId string) (resp
 	return resp, nil
 }
 
+// DeleteBatchFileSet deletes a SAS Viya Batch file set.
+//
+// SAS Viya can reject deletion with HTTP 409 when the file set is still referenced
+// by another resource, such as a job.
 func (c *Client) DeleteBatchFileSet(ctx context.Context, fileSetId string) (err error) {
 	ctx, span := tracer.Start(ctx, "DeleteBatchFileSet")
 	defer span.End()
@@ -171,8 +191,7 @@ func (c *Client) DeleteBatchFileSet(ctx context.Context, fileSetId string) (err 
 	return nil
 }
 
-// --------------------------- File ----------------------------
-
+// BatchFile describes a file stored in a SAS Viya Batch file set.
 type BatchFile struct {
 	CreationTimeStamp time.Time `json:"creationTimeStamp"`
 	CreatedBy         string    `json:"createdBy"`
@@ -185,8 +204,10 @@ type BatchFile struct {
 	Version           int       `json:"version"`
 }
 
+// BatchFileResponse is a collection of SAS Viya Batch files.
 type BatchFileResponse = ListResponse[BatchFile]
 
+// GetBatchFile returns files in a SAS Viya Batch file set.
 func (c *Client) GetBatchFile(ctx context.Context, fileSetId string) (resp BatchFileResponse, err error) {
 	ctx, span := tracer.Start(ctx, "GetBatchFileSetFiles")
 	defer span.End()
@@ -208,6 +229,7 @@ func (c *Client) GetBatchFile(ctx context.Context, fileSetId string) (resp Batch
 	return resp, nil
 }
 
+// GetBatchFileInfo returns metadata for one file in a SAS Viya Batch file set.
 func (c *Client) GetBatchFileInfo(ctx context.Context, fileSetId string, fileName string) (resp BatchFile, err error) {
 	ctx, span := tracer.Start(ctx, "GetBatchFileInfo")
 	defer span.End()
@@ -229,6 +251,7 @@ func (c *Client) GetBatchFileInfo(ctx context.Context, fileSetId string, fileNam
 	return resp, nil
 }
 
+// DownloadBatchFile downloads a file from a SAS Viya Batch file set.
 func (c *Client) DownloadBatchFile(ctx context.Context, fileSetId string, fileName string) (content []byte, err error) {
 	ctx, span := tracer.Start(ctx, "DownloadBatchFile")
 	defer span.End()
@@ -256,6 +279,7 @@ func (c *Client) DownloadBatchFile(ctx context.Context, fileSetId string, fileNa
 	return content, nil
 }
 
+// UploadBatchFile uploads or replaces a file in a SAS Viya Batch file set.
 func (c *Client) UploadBatchFile(ctx context.Context, fileSetId string, fileName string, content []byte) (err error) {
 	ctx, span := tracer.Start(ctx, "UploadBatchFile")
 	defer span.End()
@@ -278,8 +302,7 @@ func (c *Client) UploadBatchFile(ctx context.Context, fileSetId string, fileName
 	return nil
 }
 
-// --------------------------- Job ----------------------------
-
+// BatchJob describes a SAS Viya Batch job and its execution state.
 type BatchJob struct {
 	ID string `json:"id"`
 
@@ -304,8 +327,10 @@ type BatchJob struct {
 	Links         []Link `json:"links"`
 }
 
+// BatchJobsResponse is a collection of SAS Viya Batch jobs.
 type BatchJobsResponse = ListResponse[BatchJob]
 
+// GetBatchJobsList returns SAS Viya Batch jobs visible to the caller.
 func (c *Client) GetBatchJobsList(ctx context.Context) (resp BatchJobsResponse, err error) {
 	ctx, span := tracer.Start(ctx, "GetBatchJobsList")
 	defer span.End()
@@ -326,6 +351,7 @@ func (c *Client) GetBatchJobsList(ctx context.Context) (resp BatchJobsResponse, 
 	return resp, nil
 }
 
+// GetBatchJobInfo returns details for a SAS Viya Batch job.
 func (c *Client) GetBatchJobInfo(ctx context.Context, jobId string) (resp BatchJob, err error) {
 	ctx, span := tracer.Start(ctx, "GetBatchJobInfo")
 	defer span.End()
@@ -346,6 +372,7 @@ func (c *Client) GetBatchJobInfo(ctx context.Context, jobId string) (resp BatchJ
 	return resp, nil
 }
 
+// SubmitBatchJobRequest is the request body for creating a SAS Viya Batch job.
 type SubmitBatchJobRequest struct {
 	FileSetID       string          `json:"fileSetId"`
 	LauncherOptions LauncherOptions `json:"launcherOptions"`
@@ -359,6 +386,7 @@ type SubmitBatchJobRequest struct {
 	Version         int             `json:"version"`
 }
 
+// LauncherOptions configures how SAS Viya Batch launches a job.
 type LauncherOptions struct {
 	BatchContextID    string `json:"batchContextId"`
 	JobName           string `json:"jobName"`
@@ -366,6 +394,10 @@ type LauncherOptions struct {
 	WorkloadQueueName string `json:"workloadQueueName"`
 }
 
+// CreateBatchJob submits a SAS Viya Batch job.
+//
+// req.FileSetID should identify a file set that contains the SAS program named
+// by req.SASProgramName and any related input files.
 func (c *Client) CreateBatchJob(ctx context.Context, req SubmitBatchJobRequest) (resp BatchJob, err error) {
 	ctx, span := tracer.Start(ctx, "CreateBatchJob")
 	defer span.End()
@@ -389,6 +421,7 @@ func (c *Client) CreateBatchJob(ctx context.Context, req SubmitBatchJobRequest) 
 	return resp, nil
 }
 
+// DeleteBatchJob deletes a SAS Viya Batch job.
 func (c *Client) DeleteBatchJob(ctx context.Context, jobId string) (err error) {
 	ctx, span := tracer.Start(ctx, "DeleteBatchJob")
 	defer span.End()
@@ -407,6 +440,10 @@ func (c *Client) DeleteBatchJob(ctx context.Context, jobId string) (err error) {
 	return nil
 }
 
+// WaitBatchJobCompleted polls a SAS Viya Batch job until it reaches a terminal state.
+//
+// It returns "completed" or "failed". The wait stops early when ctx is canceled
+// or GetBatchJobInfo returns an error.
 func (c *Client) WaitBatchJobCompleted(ctx context.Context, jobId string, interval time.Duration) (finalState string, err error) {
 	ctx, span := tracer.Start(ctx, "WaitBatchJobCompleted")
 	defer span.End()

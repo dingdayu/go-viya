@@ -2,6 +2,7 @@ package viya
 
 import "context"
 
+// Metadata contains metadata fields commonly returned by SAS Viya configuration resources.
 type Metadata struct {
 	CreationTimeStamp string   `json:"creationTimeStamp"`
 	CreatedBy         string   `json:"createdBy"`
@@ -12,8 +13,15 @@ type Metadata struct {
 	Services          []string `json:"services"`
 }
 
+// ConfigurationsResp is a SAS Viya configuration collection response.
+//
+// Configuration payloads vary by definition, so items are represented as map[string]any.
 type ConfigurationsResp = ListResponse[map[string]any]
 
+// GetConfiguration returns configuration instances for a SAS Viya definition name.
+//
+// definitionName is passed to /configuration/configurations as the definitionName query parameter.
+// The response body is returned as a string because configuration shapes are dynamic.
 func (c *Client) GetConfiguration(ctx context.Context, definitionName string) (string, error) {
 	request := c.client.R().SetContext(ctx)
 

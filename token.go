@@ -15,10 +15,15 @@ import (
 
 const defaultClientID = "go-viya"
 
+// ErrViyaAuthFailed is returned when SAS Viya authentication cannot produce a bearer token.
 var ErrViyaAuthFailed = errors.New("viya authentication failed")
 
-// TokenProvider 用于向 batch Client 注入 Bearer Token。
-// 你可以在上层对接 OAuth2 client credentials、缓存 token、自动刷新等逻辑。
+// TokenProvider supplies bearer tokens for authenticated SAS Viya requests.
+//
+// Implementations may use SAS Logon OAuth2 grants, cached tokens, or an external
+// credential source. Implementations should honor ctx cancellation where possible.
+// SAS Logon API reference:
+// https://developer.sas.com/rest-apis/SASLogon
 type TokenProvider interface {
 	Token(ctx context.Context) (string, error)
 }
@@ -29,10 +34,11 @@ type tokenProviderOptions struct {
 	clientSecret string
 }
 
-// TokenProviderOption configures providers that can optionally use an OAuth2 client.
+// TokenProviderOption configures token providers that use SAS Logon OAuth2 clients.
 type TokenProviderOption func(*tokenProviderOptions)
 
-// WithOAuthClient configures the OAuth2 client used by password/auth-code flows.
+// WithOAuthClient configures the OAuth2 client used by password and authorization-code flows.
+//
 // clientSecret is optional for public clients.
 func WithOAuthClient(clientID, clientSecret string) TokenProviderOption {
 	return func(o *tokenProviderOptions) {
@@ -54,7 +60,8 @@ func WithOAuthClientProvider(provider *ClientCredentialsTokenProvider) TokenProv
 	}
 }
 
-// ClientCredentialsTokenProvider provides bearer tokens using OAuth2 client credentials flow.
+// ClientCredentialsTokenProvider provides bearer tokens using the OAuth2 client credentials flow.
+//
 // It is also used as the shared credential holder by Password/AuthCode providers.
 type ClientCredentialsTokenProvider struct {
 	baseURL      string
@@ -88,6 +95,7 @@ func (p *ClientCredentialsTokenProvider) tokenContext(ctx context.Context) conte
 	return context.WithValue(ctx, oauth2.HTTPClient, p.httpClient)
 }
 
+// Token returns a bearer token from SAS Logon, refreshing it through oauth2.TokenSource as needed.
 func (p *ClientCredentialsTokenProvider) Token(ctx context.Context) (string, error) {
 	p.mu.Lock()
 	if p.tokenSource == nil {
@@ -110,13 +118,16 @@ func (p *ClientCredentialsTokenProvider) Token(ctx context.Context) (string, err
 	return tok.AccessToken, nil
 }
 
-// PasswordTokenProvider provides bearer tokens using OAuth2 password flow.
+// PasswordTokenProvider provides bearer tokens using the OAuth2 password flow.
+//
+// This flow requires SAS Logon to allow password grants for the configured OAuth client.
 type PasswordTokenProvider struct {
 	*ClientCredentialsTokenProvider
 	username string
 	password string
 }
 
+// Token returns a bearer token for the configured username and password.
 func (p *PasswordTokenProvider) Token(ctx context.Context) (string, error) {
 	p.mu.Lock()
 	if p.tokenSource == nil {
@@ -148,12 +159,13 @@ func (p *PasswordTokenProvider) Token(ctx context.Context) (string, error) {
 	return tok.AccessToken, nil
 }
 
-// AuthCodeTokenProvider provides bearer tokens using OAuth2 authorization code flow.
+// AuthCodeTokenProvider provides bearer tokens using the OAuth2 authorization code flow.
 type AuthCodeTokenProvider struct {
 	*ClientCredentialsTokenProvider
 	code string
 }
 
+// Token exchanges the configured authorization code for a bearer token, then refreshes it as needed.
 func (p *AuthCodeTokenProvider) Token(ctx context.Context) (string, error) {
 	p.mu.Lock()
 	if p.tokenSource == nil {
@@ -228,6 +240,10 @@ func providerOptions(baseURL string, opts ...TokenProviderOption) tokenProviderO
 	return options
 }
 
+// NewPasswordTokenProvider creates a token provider that authenticates with username and password.
+//
+// baseURL must be the SAS Viya deployment root. Use WithOAuthClient to override
+// the default OAuth client ID or provide a client secret.
 func NewPasswordTokenProvider(baseURL, username, password string, opts ...TokenProviderOption) (TokenProvider, error) {
 	if username == "" || password == "" {
 		return nil, ErrViyaAuthFailed
@@ -246,6 +262,10 @@ func NewPasswordTokenProvider(baseURL, username, password string, opts ...TokenP
 	}, nil
 }
 
+// NewAuthCodeTokenProvider creates a token provider that exchanges an OAuth2 authorization code.
+//
+// baseURL must be the SAS Viya deployment root. Use WithOAuthClient to pass the
+// OAuth client registration that issued the code.
 func NewAuthCodeTokenProvider(baseURL, code string, opts ...TokenProviderOption) (TokenProvider, error) {
 	if code == "" {
 		return nil, ErrViyaAuthFailed
@@ -263,6 +283,10 @@ func NewAuthCodeTokenProvider(baseURL, code string, opts ...TokenProviderOption)
 	}, nil
 }
 
+// NewClientCredentialsTokenProvider creates a token provider for service-to-service authentication.
+//
+// baseURL must be the SAS Viya deployment root. clientID and clientSecret must
+// identify a SAS Logon OAuth client that is allowed to use client credentials.
 func NewClientCredentialsTokenProvider(baseURL, clientID, clientSecret string) (*ClientCredentialsTokenProvider, error) {
 	base, err := newCredentialBase(tokenProviderOptions{
 		baseURL:      baseURL,
