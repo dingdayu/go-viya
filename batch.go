@@ -457,10 +457,11 @@ func (c *Client) WaitBatchJobCompleted(ctx context.Context, jobId string, interv
 		case <-ctx.Done():
 			return jobInfo, ctx.Err()
 		case <-ticker.C:
-			jobInfo, err = c.GetBatchJobInfo(ctx, jobId)
+			nextJobInfo, err := c.GetBatchJobInfo(ctx, jobId)
 			if err != nil {
 				return jobInfo, err
 			}
+			jobInfo = nextJobInfo
 			if jobInfo.State == "completed" || jobInfo.State == "failed" {
 				return jobInfo, nil
 			}
