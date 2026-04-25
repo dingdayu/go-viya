@@ -442,9 +442,10 @@ func (c *Client) DeleteBatchJob(ctx context.Context, jobId string) (err error) {
 
 // WaitBatchJobCompleted polls a SAS Viya Batch job until it reaches a terminal state.
 //
-// It returns "completed" or "failed". The wait stops early when ctx is canceled
-// or GetBatchJobInfo returns an error.
-func (c *Client) WaitBatchJobCompleted(ctx context.Context, jobId string, interval time.Duration) (finalState string, err error) {
+// It returns the final job details when the job state is "completed" or "failed".
+// The wait stops early when ctx is canceled or GetBatchJobInfo returns an error.
+// In that case, the returned BatchJob contains the most recent job details, if any.
+func (c *Client) WaitBatchJobCompleted(ctx context.Context, jobId string, interval time.Duration) (jobInfo BatchJob, err error) {
 	ctx, span := tracer.Start(ctx, "WaitBatchJobCompleted")
 	defer span.End()
 
@@ -454,14 +455,14 @@ func (c *Client) WaitBatchJobCompleted(ctx context.Context, jobId string, interv
 	for {
 		select {
 		case <-ctx.Done():
-			return "", ctx.Err()
+			return jobInfo, ctx.Err()
 		case <-ticker.C:
-			jobInfo, err := c.GetBatchJobInfo(ctx, jobId)
+			jobInfo, err = c.GetBatchJobInfo(ctx, jobId)
 			if err != nil {
-				return "", err
+				return jobInfo, err
 			}
 			if jobInfo.State == "completed" || jobInfo.State == "failed" {
-				return jobInfo.State, nil
+				return jobInfo, nil
 			}
 		}
 	}
