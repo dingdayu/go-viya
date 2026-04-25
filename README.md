@@ -4,7 +4,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/dingdayu/go-viya.svg)](https://pkg.go.dev/github.com/dingdayu/go-viya)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dingdayu/go-viya)](https://goreportcard.com/report/github.com/dingdayu/go-viya)
 
-`go-viya` is a Go client library for selected SAS Viya REST APIs. It provides token providers, a Resty-backed client, and helpers for identities, configuration, batch, and CAS table operations.
+`go-viya` is a Go client library for selected SAS Viya REST APIs. It follows the REST protocols and media types documented at <https://developer.sas.com/rest-apis>, and provides token providers, a Resty-backed client, and helpers for identities, configuration, batch, and CAS table operations.
 
 ## Installation
 
@@ -75,15 +75,45 @@ provider, err := viya.NewPasswordTokenProvider(
 )
 ```
 
-## Supported Areas
+## API Basis
 
-- Identities: refresh identities cache and list users.
-- Configuration: read configuration definitions.
-- Batch: inspect contexts, file sets, files, jobs, and related resources.
-- CAS: load and unload CAS library tables.
-- OpenTelemetry: outbound token requests and client operations are instrumented with spans.
+This package is implemented against the public SAS Viya REST API documentation:
 
-The API surface is intentionally small and grows around tested SAS Viya workflows.
+- SAS Viya REST APIs: <https://developer.sas.com/rest-apis>
+- SAS Logon API: <https://developer.sas.com/rest-apis/SASLogon>
+- Batch API: <https://developer.sas.com/rest-apis/batch>
+
+The API surface is intentionally small and grows around tested SAS Viya workflows. It is not a generated client for every SAS Viya endpoint.
+
+## Supported Features
+
+Current implemented areas include:
+
+- Authentication:
+  - OAuth2 client credentials token provider.
+  - OAuth2 password token provider.
+  - OAuth2 authorization-code token provider.
+  - Custom `TokenProvider` support.
+- Default client wiring:
+  - Set, get, and must-get helpers for a process-wide default client.
+- Identities:
+  - Refresh the identities cache.
+  - List identity users.
+  - Read LDAP user configuration.
+  - Patch LDAP group configuration.
+  - Update LDAP object filters from usernames.
+- Configuration:
+  - Read configuration definitions.
+- Batch:
+  - List batch contexts.
+  - List, create, inspect, and delete batch file sets.
+  - List, inspect, download, and upload files in batch file sets.
+  - List, create, inspect, delete, and wait for batch jobs.
+- CAS:
+  - Load CAS library tables to memory.
+  - Unload CAS library tables from memory.
+- Observability:
+  - OpenTelemetry spans for outbound token requests and client operations.
 
 ## Development
 
