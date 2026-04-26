@@ -75,6 +75,56 @@ provider, err := viya.NewPasswordTokenProvider(
 )
 ```
 
+### Distributed services
+
+The built-in providers cache and refresh tokens in the current Go process. This
+is suitable for command-line tools, tests, and simple services, but it is not a
+distributed token cache.
+
+For multi-instance deployments, implement `TokenProvider` in your application
+and keep refresh-token handling behind your own operational boundary. A typical
+implementation reads a valid access token from a shared cache or internal
+authentication service, refreshes it with a distributed lock before expiry, and
+stores refresh tokens in a secret manager such as Vault, KMS-backed storage, or
+your platform's secret store.
+
+`go-viya` intentionally asks only for a bearer access token. It does not expose
+refresh tokens, because refresh-token storage, rotation, revocation, encryption,
+auditing, tenant isolation, and cross-instance locking are deployment-specific
+security concerns.
+
+```go
+type DistributedTokenProvider struct {
+	cache SharedTokenCache
+}
+
+func (p DistributedTokenProvider) Token(ctx context.Context) (string, error) {
+	token, err := p.cache.AccessToken(ctx)
+	if err != nil {
+		return "", fmt.Errorf("viya access token: %w", err)
+	}
+	if token == "" {
+		return "", viya.ErrViyaAuthFailed
+	}
+	return token, nil
+}
+
+provider := DistributedTokenProvider{cache: cache}
+client := viya.NewClient(ctx, baseURL, viya.WithTokenProvider(provider))
+```
+
+See `examples/` for complete custom provider and workflow examples.
+
+## Examples
+
+- `examples/client-credentials`: create a client with OAuth2 client credentials and list identity users.
+- `examples/password-flow`: use the OAuth2 password grant when SAS Logon allows it.
+- `examples/distributed-token-provider`: connect `go-viya` to an application-managed shared token cache.
+- `examples/configuration`: read a dynamic SAS Viya configuration definition.
+- `examples/default-client`: configure and retrieve the process-wide default client.
+- `examples/batch-job`: create a file set, upload a SAS program, submit a batch job, and wait for completion.
+- `examples/cas-table-state`: load and optionally unload a CAS table.
+
 ## API Basis
 
 This package is implemented against the public SAS Viya REST API documentation:

@@ -22,6 +22,10 @@ var ErrViyaAuthFailed = errors.New("viya authentication failed")
 //
 // Implementations may use SAS Logon OAuth2 grants, cached tokens, or an external
 // credential source. Implementations should honor ctx cancellation where possible.
+// In distributed services, implement this interface with your own shared cache,
+// secret storage, refresh-token rotation, and cross-instance locking strategy.
+// This package intentionally consumes only bearer access tokens and does not
+// expose refresh tokens.
 // SAS Logon API reference:
 // https://developer.sas.com/rest-apis/SASLogon
 type TokenProvider interface {
