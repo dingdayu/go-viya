@@ -132,6 +132,7 @@ This package is implemented against the public SAS Viya REST API documentation:
 - SAS Viya REST APIs: <https://developer.sas.com/rest-apis>
 - SAS Logon API: <https://developer.sas.com/rest-apis/SASLogon>
 - Batch API: <https://developer.sas.com/rest-apis/batch>
+- Compute API: <https://developer.sas.com/rest-apis/compute>
 
 The API surface is intentionally small and grows around tested SAS Viya workflows. It is not a generated client for every SAS Viya endpoint.
 
@@ -161,6 +162,11 @@ Current implemented areas include:
   - List, create, inspect, delete, cancel, wait for, and retrieve state/output for batch jobs.
   - Send STDIN to running batch jobs.
   - List, inspect, and delete reusable batch servers.
+- Compute:
+  - List and inspect compute contexts.
+  - List, create, inspect, cancel, and delete compute sessions.
+  - List, create, inspect, cancel, delete, and retrieve state for compute jobs.
+  - Retrieve compute job log and listing output as collections or plain text.
 - CAS:
   - Load CAS library tables to memory.
   - Unload CAS library tables from memory.
