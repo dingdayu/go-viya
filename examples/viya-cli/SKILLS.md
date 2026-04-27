@@ -115,13 +115,21 @@ tables, or columns.
 
 ## Prompt Workflows
 
-For SAS log debugging, data exploration, quality checks, statistical analysis,
-optimization, macro building, and report generation, produce the needed SAS code
-or analysis text directly in the conversation, then use `viya-cli run` only when
-execution is needed.
+Use these workflows directly in the conversation. Generate SAS code or analysis
+text first, then use `viya-cli run` only when execution is needed.
+
+- **Debug a SAS log**: identify errors, warnings, and notable notes; for each issue, explain the likely root cause and suggest a concrete fix. If the user names a severity, focus on that level.
+- **Explore a dataset**: generate production-ready profiling code for `library.dataset` using `PROC CONTENTS`, `PROC MEANS` for numeric variables, `PROC FREQ` for categorical variables, and `PROC UNIVARIATE` for distributions. Honor any focus variables.
+- **Check data quality**: generate SAS code that checks completeness, duplicate keys, validity or range rules, and consistency. Include user-provided key variables and business rules, and produce a summary report with quality scores.
+- **Build statistical analysis**: generate a complete analysis workflow for the requested analysis type, dataset, response variable, and predictors. Include data preparation, model fitting, diagnostics, assumption checks, and interpretation comments.
+- **Optimize SAS code**: review code for the requested focus, defaulting to performance and readability. Explain what the current code does, the issue, an optimized replacement, and expected improvement.
+- **Explain SAS code**: provide a block-by-block explanation tailored to the requested audience level, defaulting to intermediate. Cover what each block does, key SAS concepts, and potential issues or improvements.
+- **Build a SAS macro**: create a production-quality `%macro` with parameter validation, helpful errors, a header comment with usage examples, `%LOCAL` internal variables, and SAS macro best practices.
+- **Generate a report**: produce ODS and `PROC REPORT` or `PROC TABULATE` code for the requested dataset, report type, and output format, defaulting to a summary HTML report. Include titles, footnotes, formatting, summary statistics, and proper ODS open/close statements.
 
 Keep generated SAS short and deterministic. Use explicit libraries, table names,
-titles, and ODS destinations when producing report code.
+titles, and ODS destinations when producing report code. Do not embed secrets or
+credentials in generated SAS.
 
 ## Safety
 
