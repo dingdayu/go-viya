@@ -155,10 +155,12 @@ Current implemented areas include:
 - Configuration:
   - Read configuration definitions.
 - Batch:
-  - List batch contexts.
+  - List batch contexts and inspect contexts by name.
   - List, create, inspect, and delete batch file sets.
   - List, inspect, download, and upload files in batch file sets.
-  - List, create, inspect, delete, and wait for batch jobs.
+  - List, create, inspect, delete, cancel, wait for, and retrieve state/output for batch jobs.
+  - Send STDIN to running batch jobs.
+  - List, inspect, and delete reusable batch servers.
 - CAS:
   - Load CAS library tables to memory.
   - Unload CAS library tables from memory.

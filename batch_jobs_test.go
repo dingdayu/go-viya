@@ -2,8 +2,8 @@ package viya
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -13,29 +13,30 @@ import (
 	"time"
 )
 
-func TestUploadBatchFileFromReaderSendsFileContent(t *testing.T) {
-	const body = "data _null_; put 'hello'; run;"
-
+func TestSendBatchJobInputSendsLines(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got, want := r.Method, http.MethodPut; got != want {
+		if got, want := r.Method, http.MethodPost; got != want {
 			t.Fatalf("method = %q, want %q", got, want)
 		}
-		if got, want := r.RequestURI, "/batch/fileSets/file%20set%201/files/program%20one.sas"; got != want {
+		if got, want := r.RequestURI, "/batch/jobs/job%201/input"; got != want {
 			t.Fatalf("request URI = %q, want %q", got, want)
 		}
 		if got, want := r.Header.Get("Accept"), "application/vnd.sas.error+json"; got != want {
 			t.Fatalf("Accept = %q, want %q", got, want)
 		}
-		if got := r.Header.Get("Content-Type"); !strings.HasPrefix(got, "application/octet-stream") {
-			t.Fatalf("Content-Type = %q, want application/octet-stream", got)
+		if got := r.Header.Get("Content-Type"); !strings.HasPrefix(got, "application/json") {
+			t.Fatalf("Content-Type = %q, want application/json", got)
 		}
 
-		gotBody, err := io.ReadAll(r.Body)
-		if err != nil {
-			t.Fatalf("read request body: %v", err)
+		var req BatchJobInputRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request body: %v", err)
 		}
-		if got := string(gotBody); got != body {
-			t.Fatalf("body = %q, want %q", got, body)
+		if !reflect.DeepEqual(req.Input, []string{"first\n", "second\n"}) {
+			t.Fatalf("input = %#v, want %#v", req.Input, []string{"first\n", "second\n"})
+		}
+		if got, want := req.Version, 1; got != want {
+			t.Fatalf("version = %d, want %d", got, want)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -44,26 +45,98 @@ func TestUploadBatchFileFromReaderSendsFileContent(t *testing.T) {
 
 	client := NewClient(context.Background(), server.URL)
 
-	err := client.UploadBatchFileFromReader(context.Background(), "file set 1", "program one.sas", strings.NewReader(body))
+	err := client.SendBatchJobInput(context.Background(), "job 1", []string{"first\n", "second\n"})
 	if err != nil {
-		t.Fatalf("UploadBatchFileFromReader() error = %v", err)
+		t.Fatalf("SendBatchJobInput() error = %v", err)
 	}
 }
 
-func TestUploadBatchFileFromReaderReturnsStatusError(t *testing.T) {
+func TestGetBatchJobOutputDecodesOutput(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, `{"message":"missing file set"}`, http.StatusNotFound)
+		if got, want := r.Method, http.MethodPost; got != want {
+			t.Fatalf("method = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Path, "/batch/jobs/job-1/output"; got != want {
+			t.Fatalf("path = %q, want %q", got, want)
+		}
+		if got, want := r.Header.Get("Accept"), "application/json, application/vnd.sas.error+json"; got != want {
+			t.Fatalf("Accept = %q, want %q", got, want)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"errors":["warn\n"],"output":["line one\n","line two\n"],"version":1}`))
 	}))
 	defer server.Close()
 
 	client := NewClient(context.Background(), server.URL)
 
-	err := client.UploadBatchFileFromReader(context.Background(), "file-set-1", "program.sas", strings.NewReader("body"))
-	if err == nil {
-		t.Fatal("UploadBatchFileFromReader() error = nil, want error")
+	output, err := client.GetBatchJobOutput(context.Background(), "job-1")
+	if err != nil {
+		t.Fatalf("GetBatchJobOutput() error = %v", err)
 	}
-	if !strings.Contains(err.Error(), "status code: 404") {
-		t.Fatalf("error = %q, want status code 404", err.Error())
+	if !reflect.DeepEqual(output.Errors, []string{"warn\n"}) {
+		t.Fatalf("Errors = %#v, want %#v", output.Errors, []string{"warn\n"})
+	}
+	if !reflect.DeepEqual(output.Output, []string{"line one\n", "line two\n"}) {
+		t.Fatalf("Output = %#v, want %#v", output.Output, []string{"line one\n", "line two\n"})
+	}
+	if got, want := output.Version, 1; got != want {
+		t.Fatalf("Version = %d, want %d", got, want)
+	}
+}
+
+func TestGetBatchJobStateReturnsPlainTextState(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.Method, http.MethodGet; got != want {
+			t.Fatalf("method = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Path, "/batch/jobs/job-1/state"; got != want {
+			t.Fatalf("path = %q, want %q", got, want)
+		}
+		if got, want := r.Header.Get("Accept"), "text/plain, application/vnd.sas.error+json"; got != want {
+			t.Fatalf("Accept = %q, want %q", got, want)
+		}
+
+		w.Header().Set("Content-Type", "text/plain")
+		_, _ = w.Write([]byte("completed\n"))
+	}))
+	defer server.Close()
+
+	client := NewClient(context.Background(), server.URL)
+
+	state, err := client.GetBatchJobState(context.Background(), "job-1")
+	if err != nil {
+		t.Fatalf("GetBatchJobState() error = %v", err)
+	}
+	if got, want := state, "completed"; got != want {
+		t.Fatalf("state = %q, want %q", got, want)
+	}
+}
+
+func TestCancelBatchJobSetsCanceledState(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.Method, http.MethodPut; got != want {
+			t.Fatalf("method = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Path, "/batch/jobs/job-1/state"; got != want {
+			t.Fatalf("path = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Query().Get("value"), "canceled"; got != want {
+			t.Fatalf("value query = %q, want %q", got, want)
+		}
+		if got, want := r.Header.Get("Accept"), "application/vnd.sas.error+json"; got != want {
+			t.Fatalf("Accept = %q, want %q", got, want)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	client := NewClient(context.Background(), server.URL)
+
+	err := client.CancelBatchJob(context.Background(), "job-1")
+	if err != nil {
+		t.Fatalf("CancelBatchJob() error = %v", err)
 	}
 }
 
