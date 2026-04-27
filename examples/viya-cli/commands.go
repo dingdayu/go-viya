@@ -2,6 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/dingdayu/go-viya"
@@ -24,6 +28,9 @@ It reads configuration from flags, environment variables, and
 	cmd.SetErr(ioStreams.stderr)
 	cmd.AddCommand(newRunCommand(ioStreams))
 	cmd.AddCommand(newCASCommand(ioStreams))
+	cmd.AddCommand(newDataCommand(ioStreams))
+	cmd.AddCommand(newFilesCommand(ioStreams))
+	cmd.AddCommand(newJobsCommand(ioStreams))
 	return cmd
 }
 
@@ -200,6 +207,265 @@ func newCASRowsCommand(ioStreams cliIO, opts *casOptions) *cobra.Command {
 	cmd.Flags().IntVar(&start, "start", 0, "Row offset")
 	cmd.Flags().IntVar(&limit, "limit", 100, "Maximum rows to return")
 	return cmd
+}
+
+func newDataCommand(ioStreams cliIO) *cobra.Command {
+	opts := &dataOptions{cfg: cliConfig{Timeout: 5 * time.Minute}}
+	cmd := &cobra.Command{
+		Use:   "data",
+		Short: "Upload and promote CAS data",
+	}
+	addConfigFlags(cmd.PersistentFlags(), &opts.cfg)
+	cmd.AddCommand(newDataUploadCSVCommand(ioStreams, opts))
+	cmd.AddCommand(newDataPromoteCommand(ioStreams, opts))
+	return cmd
+}
+
+func newDataUploadCSVCommand(ioStreams cliIO, opts *dataOptions) *cobra.Command {
+	var table casTableFlags
+	var file string
+	cmd := &cobra.Command{
+		Use:   "upload-csv",
+		Short: "Upload CSV data into a CAS table",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := table.require(); err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			if err := requireFlag("file", file); err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			content, err := readInputFile(file, ioStreams.stdin)
+			if err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			return runViyaCommand(ioStreams, opts.cfg, func(ctx context.Context, client *viya.Client) (any, error) {
+				return client.UploadCSVToCASTable(ctx, table.server, table.caslib, table.table, content)
+			})
+		},
+	}
+	table.addFlags(cmd.Flags())
+	cmd.Flags().StringVar(&file, "file", "", "Path to a CSV file to upload, or - for stdin")
+	return cmd
+}
+
+func newDataPromoteCommand(ioStreams cliIO, opts *dataOptions) *cobra.Command {
+	var table casTableFlags
+	cmd := &cobra.Command{
+		Use:   "promote",
+		Short: "Promote a CAS table to global scope",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := table.require(); err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			return runViyaCommand(ioStreams, opts.cfg, func(ctx context.Context, client *viya.Client) (any, error) {
+				return client.PromoteCASTable(ctx, table.server, table.caslib, table.table)
+			})
+		},
+	}
+	table.addFlags(cmd.Flags())
+	return cmd
+}
+
+func newFilesCommand(ioStreams cliIO) *cobra.Command {
+	opts := &filesOptions{cfg: cliConfig{Timeout: 5 * time.Minute}}
+	cmd := &cobra.Command{
+		Use:   "files",
+		Short: "List, upload, and download Viya Files Service files",
+	}
+	addConfigFlags(cmd.PersistentFlags(), &opts.cfg)
+	cmd.AddCommand(newFilesListCommand(ioStreams, opts))
+	cmd.AddCommand(newFilesUploadCommand(ioStreams, opts))
+	cmd.AddCommand(newFilesDownloadCommand(ioStreams, opts))
+	return cmd
+}
+
+func newFilesListCommand(ioStreams cliIO, opts *filesOptions) *cobra.Command {
+	var limit int
+	var filterName string
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List Viya Files Service files",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runViyaCommand(ioStreams, opts.cfg, func(ctx context.Context, client *viya.Client) (any, error) {
+				return client.GetFiles(ctx, viya.FileListOptions{Limit: limit, FilterName: filterName})
+			})
+		},
+	}
+	cmd.Flags().IntVar(&limit, "limit", 50, "Maximum files to return")
+	cmd.Flags().StringVar(&filterName, "filter-name", "", "Optional file name substring filter")
+	return cmd
+}
+
+func newFilesUploadCommand(ioStreams cliIO, opts *filesOptions) *cobra.Command {
+	var name string
+	var file string
+	var contentType string
+	cmd := &cobra.Command{
+		Use:   "upload",
+		Short: "Upload a file to the Viya Files Service",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireFlag("name", name); err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			if err := requireFlag("file", file); err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			content, err := readInputFile(file, ioStreams.stdin)
+			if err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			return runViyaCommand(ioStreams, opts.cfg, func(ctx context.Context, client *viya.Client) (any, error) {
+				return client.UploadFile(ctx, name, contentType, content)
+			})
+		},
+	}
+	cmd.Flags().StringVar(&name, "name", "", "Name for the uploaded file")
+	cmd.Flags().StringVar(&file, "file", "", "Path to a file to upload, or - for stdin")
+	cmd.Flags().StringVar(&contentType, "content-type", "text/plain", "MIME type for the uploaded file")
+	return cmd
+}
+
+func newFilesDownloadCommand(ioStreams cliIO, opts *filesOptions) *cobra.Command {
+	var id string
+	cmd := &cobra.Command{
+		Use:   "download",
+		Short: "Download a Viya Files Service file",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireFlag("id", id); err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			return runViyaCommand(ioStreams, opts.cfg, func(ctx context.Context, client *viya.Client) (any, error) {
+				return client.DownloadFile(ctx, id)
+			})
+		},
+	}
+	cmd.Flags().StringVar(&id, "id", "", "File ID to download")
+	return cmd
+}
+
+func newJobsCommand(ioStreams cliIO) *cobra.Command {
+	opts := &jobsOptions{cfg: cliConfig{Timeout: 5 * time.Minute}}
+	cmd := &cobra.Command{
+		Use:   "jobs",
+		Short: "Submit and inspect Job Execution service jobs",
+	}
+	addConfigFlags(cmd.PersistentFlags(), &opts.cfg)
+	cmd.AddCommand(newJobsSubmitCommand(ioStreams, opts))
+	cmd.AddCommand(newJobsListCommand(ioStreams, opts))
+	cmd.AddCommand(newJobsStatusCommand(ioStreams, opts))
+	cmd.AddCommand(newJobsCancelCommand(ioStreams, opts))
+	cmd.AddCommand(newJobsLogCommand(ioStreams, opts))
+	return cmd
+}
+
+func newJobsSubmitCommand(ioStreams cliIO, opts *jobsOptions) *cobra.Command {
+	var code string
+	var file string
+	var name string
+	cmd := &cobra.Command{
+		Use:   "submit",
+		Short: "Submit SAS code as a Job Execution job",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			sasCode, err := readCode(code, file, ioStreams.stdin)
+			if err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			if strings.TrimSpace(sasCode) == "" {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, fmt.Errorf("SAS code is required; pass --code, --file, or stdin via --file -"))
+			}
+			return runViyaCommandWithConfig(ioStreams, opts.cfg, func(ctx context.Context, client *viya.Client, cfg cliConfig) (any, error) {
+				return client.SubmitJobExecutionCode(ctx, viya.SubmitJobExecutionCodeRequest{
+					Name:        name,
+					Code:        sasCode,
+					ContextName: cfg.ContextName,
+				})
+			})
+		},
+	}
+	cmd.Flags().StringVar(&code, "code", "", "SAS code to submit")
+	cmd.Flags().StringVar(&file, "file", "", "Path to a .sas file to submit, or - for stdin")
+	cmd.Flags().StringVar(&name, "name", "", "Job name")
+	cmd.Flags().StringVar(&opts.cfg.ContextName, "context-name", "", "Compute context name")
+	return cmd
+}
+
+func newJobsListCommand(ioStreams cliIO, opts *jobsOptions) *cobra.Command {
+	var limit int
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List Job Execution jobs",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runViyaCommand(ioStreams, opts.cfg, func(ctx context.Context, client *viya.Client) (any, error) {
+				return client.GetJobExecutionJobs(ctx, viya.ListOptions{Limit: limit})
+			})
+		},
+	}
+	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum jobs to return")
+	return cmd
+}
+
+func newJobsStatusCommand(ioStreams cliIO, opts *jobsOptions) *cobra.Command {
+	var id string
+	cmd := &cobra.Command{
+		Use:   "status",
+		Short: "Get Job Execution job status",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireFlag("id", id); err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			return runViyaCommand(ioStreams, opts.cfg, func(ctx context.Context, client *viya.Client) (any, error) {
+				return client.GetJobExecutionJob(ctx, id)
+			})
+		},
+	}
+	cmd.Flags().StringVar(&id, "id", "", "Job ID")
+	return cmd
+}
+
+func newJobsCancelCommand(ioStreams cliIO, opts *jobsOptions) *cobra.Command {
+	var id string
+	cmd := &cobra.Command{
+		Use:   "cancel",
+		Short: "Cancel a Job Execution job",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireFlag("id", id); err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			return runViyaCommand(ioStreams, opts.cfg, func(ctx context.Context, client *viya.Client) (any, error) {
+				if err := client.CancelJobExecutionJob(ctx, id); err != nil {
+					return nil, err
+				}
+				return fmt.Sprintf("Job %s cancelled.", id), nil
+			})
+		},
+	}
+	cmd.Flags().StringVar(&id, "id", "", "Job ID")
+	return cmd
+}
+
+func newJobsLogCommand(ioStreams cliIO, opts *jobsOptions) *cobra.Command {
+	var id string
+	cmd := &cobra.Command{
+		Use:   "log",
+		Short: "Retrieve a Job Execution job log",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireFlag("id", id); err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			return runViyaCommand(ioStreams, opts.cfg, func(ctx context.Context, client *viya.Client) (any, error) {
+				return client.GetJobExecutionJobLog(ctx, id)
+			})
+		},
+	}
+	cmd.Flags().StringVar(&id, "id", "", "Job ID")
+	return cmd
+}
+
+func readInputFile(path string, stdin io.Reader) ([]byte, error) {
+	if path == "-" {
+		return io.ReadAll(stdin)
+	}
+	return os.ReadFile(path)
 }
 
 func addConfigFlags(flags *pflag.FlagSet, cfg *cliConfig) {

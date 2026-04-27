@@ -1,7 +1,8 @@
 # viya-cli
 
 `viya-cli` is a small CLI example for agent frameworks that need to execute SAS
-code on SAS Viya through the Compute API and discover CAS data assets.
+code on SAS Viya, discover and manage CAS data assets, use Viya files, and
+submit asynchronous Job Execution jobs.
 
 It reads configuration from flags, environment variables, and local SAS CLI-style
 files:
@@ -99,9 +100,38 @@ CAS discovery commands default to table-like text. Use `-o json` to write
 `{ "ok": true, "data": ... }` on success and `{ "ok": false, "error": "..." }`
 on failure.
 
+Upload and promote CAS data:
+
+```bash
+viya-cli data upload-csv --server cas-shared-default --caslib Public --table HMEQ_UPLOAD --file ./hmeq.csv
+cat ./hmeq.csv | viya-cli data upload-csv --server cas-shared-default --caslib Public --table HMEQ_UPLOAD --file -
+viya-cli data promote --server cas-shared-default --caslib Public --table HMEQ_UPLOAD
+```
+
+Use the Viya Files Service:
+
+```bash
+viya-cli files list --limit 50
+viya-cli files list --filter-name report
+viya-cli files upload --name report.txt --file ./report.txt --content-type text/plain
+viya-cli files download --id file-id
+```
+
+Submit and inspect Job Execution service jobs:
+
+```bash
+viya-cli jobs submit --code "proc options; run;" --name options-check
+viya-cli jobs submit --file ./program.sas --context-name "SAS Job Execution compute context"
+viya-cli jobs list --limit 20
+viya-cli jobs status --id job-id
+viya-cli jobs log --id job-id
+viya-cli jobs cancel --id job-id
+```
+
 ## Agent Integration
 
-Agents should treat this CLI as a tool with one primary operation:
+Agents should treat this CLI as a tool with one primary synchronous execution
+operation:
 
 ```bash
 viya-cli run --file path/to/program.sas
@@ -116,6 +146,9 @@ code through stdin. Use `-o json` for machine parsing, then inspect:
 - `log`
 - `listing`
 - `error`
+
+Use `viya-cli jobs submit` when the user explicitly wants asynchronous Job
+Execution service behavior instead of a Compute session run.
 
 The CLI intentionally does not print secrets and is designed to be called from
 modern agent frameworks, shell tools, or MCP-style wrappers.

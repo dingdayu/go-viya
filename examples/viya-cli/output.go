@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/dingdayu/go-viya"
 )
@@ -19,7 +20,14 @@ func writeFailure(w io.Writer, output string, result runResult) error {
 }
 
 func writeCASFailure(w io.Writer, output string, err error) error {
-	if writeErr := writeCASOutput(w, output, casResult{OK: false, Error: err.Error()}); writeErr != nil {
+	if writeErr := writeCommandOutput(w, output, commandResult{OK: false, Error: err.Error()}); writeErr != nil {
+		return writeErr
+	}
+	return exitError{code: 1}
+}
+
+func writeCommandFailure(w io.Writer, output string, err error) error {
+	if writeErr := writeCommandOutput(w, output, commandResult{OK: false, Error: err.Error()}); writeErr != nil {
 		return writeErr
 	}
 	return exitError{code: 1}
@@ -37,15 +45,26 @@ func writeRunOutput(w io.Writer, output string, result runResult) error {
 }
 
 func writeCASOutput(w io.Writer, output string, data any) error {
+	return writeCommandOutput(w, output, data)
+}
+
+func writeCommandOutput(w io.Writer, output string, data any) error {
 	output, err := normalizeOutput(output)
 	if err != nil {
 		return err
 	}
 	if output == "json" {
+		if result, ok := data.(commandResult); ok {
+			return writeJSON(w, result)
+		}
 		if result, ok := data.(casResult); ok {
 			return writeJSON(w, result)
 		}
-		return writeJSON(w, casResult{OK: true, Data: data})
+		return writeJSON(w, commandResult{OK: true, Data: data})
+	}
+	if result, ok := data.(commandResult); ok && !result.OK {
+		_, err := fmt.Fprintf(w, "error: %s\n", result.Error)
+		return err
 	}
 	if result, ok := data.(casResult); ok && !result.OK {
 		_, err := fmt.Fprintf(w, "error: %s\n", result.Error)
@@ -157,6 +176,32 @@ func writeCASText(w io.Writer, data any) error {
 			}
 			fmt.Fprintln(tw)
 		}
+	case viya.ViyaFilesResponse:
+		fmt.Fprintln(tw, "ID\tNAME\tCONTENT TYPE\tSIZE")
+		for _, item := range v.Items {
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%d\n", item.ID, item.Name, item.ContentType, item.Size)
+		}
+	case viya.ViyaFile:
+		fmt.Fprintln(tw, "ID\tNAME\tCONTENT TYPE\tSIZE")
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%d\n", v.ID, v.Name, v.ContentType, v.Size)
+	case viya.JobExecutionJobsResponse:
+		fmt.Fprintln(tw, "ID\tNAME\tSTATE\tCREATED")
+		for _, item := range v.Items {
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", item.ID, item.Name, item.State, item.CreationTimeStamp.Format(time.RFC3339))
+		}
+	case viya.JobExecutionJob:
+		fmt.Fprintln(tw, "ID\tNAME\tSTATE\tCREATED")
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", v.ID, v.Name, v.State, v.CreationTimeStamp.Format(time.RFC3339))
+	case string:
+		_, err := fmt.Fprint(w, v)
+		if err != nil || strings.HasSuffix(v, "\n") {
+			return err
+		}
+		_, err = fmt.Fprintln(w)
+		return err
+	case []byte:
+		_, err := w.Write(v)
+		return err
 	default:
 		return writeJSON(w, data)
 	}

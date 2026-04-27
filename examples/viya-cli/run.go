@@ -12,18 +12,28 @@ import (
 )
 
 func runCASCommand(ioStreams cliIO, opts *casOptions, call func(context.Context, *viya.Client) (any, error)) error {
-	client, ctx, cancel, cfg, err := newConfiguredClient(opts.cfg)
+	return runViyaCommand(ioStreams, opts.cfg, call)
+}
+
+func runViyaCommand(ioStreams cliIO, cfg cliConfig, call func(context.Context, *viya.Client) (any, error)) error {
+	return runViyaCommandWithConfig(ioStreams, cfg, func(ctx context.Context, client *viya.Client, _ cliConfig) (any, error) {
+		return call(ctx, client)
+	})
+}
+
+func runViyaCommandWithConfig(ioStreams cliIO, cfg cliConfig, call func(context.Context, *viya.Client, cliConfig) (any, error)) error {
+	client, ctx, cancel, cfg, err := newConfiguredClient(cfg)
 	if err != nil {
-		return writeCASFailure(ioStreams.stdout, opts.cfg.Output, err)
+		return writeCommandFailure(ioStreams.stdout, cfg.Output, err)
 	}
 	defer cancel()
 
-	data, err := call(ctx, client)
+	data, err := call(ctx, client, cfg)
 	if err != nil {
-		return writeCASFailure(ioStreams.stdout, opts.cfg.Output, err)
+		return writeCommandFailure(ioStreams.stdout, cfg.Output, err)
 	}
 
-	return writeCASOutput(ioStreams.stdout, cfg.Output, data)
+	return writeCommandOutput(ioStreams.stdout, cfg.Output, data)
 }
 
 func runSAS(ioStreams cliIO, opts *runOptions) error {

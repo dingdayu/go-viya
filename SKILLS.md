@@ -14,11 +14,13 @@ This project benefits from contributors with the following skills.
 - Understand SAS Viya authentication flows and token endpoints.
 - Validate API behavior against real or representative Viya environments.
 - Document service-specific assumptions such as CAS server names and media types.
+- Keep CAS data operations, Files Service calls, and Job Execution service calls aligned with documented REST paths, media types, and status handling.
 
 ## Testing
 
 - Add table-driven unit tests for request construction, error handling, and response parsing.
 - Use `httptest.Server` for HTTP behavior.
+- Cover CLI text and JSON output when adding agent-facing commands.
 - Avoid tests that require live SAS Viya credentials unless they are explicitly marked as integration tests.
 
 ## Observability

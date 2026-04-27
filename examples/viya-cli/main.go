@@ -58,6 +58,12 @@ type casResult struct {
 	Error string `json:"error,omitempty"`
 }
 
+type commandResult struct {
+	OK    bool   `json:"ok"`
+	Data  any    `json:"data,omitempty"`
+	Error string `json:"error,omitempty"`
+}
+
 type cliIO struct {
 	stdout io.Writer
 	stderr io.Writer
@@ -71,6 +77,18 @@ type runOptions struct {
 }
 
 type casOptions struct {
+	cfg cliConfig
+}
+
+type dataOptions struct {
+	cfg cliConfig
+}
+
+type filesOptions struct {
+	cfg cliConfig
+}
+
+type jobsOptions struct {
 	cfg cliConfig
 }
 

@@ -11,17 +11,10 @@ Goals and constraints for remaining sas-mcp-server replacement work.
 
 ## Remaining Capabilities
 
-- Data operations and files:
-  - upload CSV data into a CAS table
-  - promote a CAS table to global scope
-  - list, upload, and download Viya Files service files
 - Reports and visualization:
   - list Visual Analytics reports
   - get report metadata and definition
   - request report section image rendering
-- Job Execution service:
-  - submit SAS code as an asynchronous job
-  - list jobs, get job status, cancel jobs, and retrieve job logs
 - Model management and scoring:
   - list AutoML projects
   - create and run AutoML projects
@@ -44,4 +37,7 @@ Goals and constraints for remaining sas-mcp-server replacement work.
 
 - Execute SAS code through `viya-cli run`.
 - Discover CAS servers, caslibs, tables, table metadata, columns, and sample rows through `viya-cli cas ...`.
+- Upload CSV data into CAS tables and promote CAS tables through `viya-cli data ...`.
+- List, upload, and download Viya Files service files through `viya-cli files ...`.
+- Submit, list, inspect, cancel, and retrieve logs for Job Execution jobs through `viya-cli jobs ...`.
 - Provide an agent skill guide that uses `viya-cli` instead of an MCP service.

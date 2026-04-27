@@ -1,13 +1,13 @@
 ---
 name: sas-viya
-description: Use this skill when you need to execute SAS code or discover CAS data assets on SAS Viya through the Go viya-cli example. It replaces SAS MCP server style workflows with direct CLI calls and supports text or JSON output.
+description: Use this skill when you need to execute SAS code, discover or manage CAS data, use Viya files, or submit Job Execution jobs on SAS Viya through the Go viya-cli example. It replaces SAS MCP server style workflows with direct CLI calls and supports text or JSON output.
 ---
 
 # viya-cli Agent Skill
 
-Use `viya-cli` when an agent needs to execute SAS code or discover CAS data
-assets on SAS Viya. It is a Go-only CLI; do not start a Python MCP server for
-this workflow.
+Use `viya-cli` when an agent needs to execute SAS code, discover or manage CAS
+data assets, exchange files, or submit asynchronous jobs on SAS Viya. It is a
+Go-only CLI; do not start a Python MCP server for this workflow.
 
 ## Setup
 
@@ -113,6 +113,66 @@ viya-cli cas rows --server cas-shared-default --caslib Public --table HMEQ --sta
 Prefer discovery commands before generating SAS that references unknown caslibs,
 tables, or columns.
 
+## CAS Data Operations
+
+Upload CSV data into CAS:
+
+```bash
+viya-cli data upload-csv --server cas-shared-default --caslib Public --table WORK_UPLOAD --file ./data.csv
+```
+
+Stream CSV data:
+
+```bash
+cat ./data.csv | viya-cli data upload-csv --server cas-shared-default --caslib Public --table WORK_UPLOAD --file -
+```
+
+Promote a table to global scope:
+
+```bash
+viya-cli data promote --server cas-shared-default --caslib Public --table WORK_UPLOAD
+```
+
+## Files Service
+
+List files:
+
+```bash
+viya-cli files list --limit 50
+viya-cli files list --filter-name report
+```
+
+Upload and download files:
+
+```bash
+viya-cli files upload --name report.txt --file ./report.txt --content-type text/plain
+viya-cli files download --id file-id
+```
+
+Use `-o json` for file metadata. File downloads write raw content in text mode.
+
+## Job Execution
+
+Submit SAS code asynchronously:
+
+```bash
+viya-cli jobs submit --code "proc options; run;" --name options-check
+viya-cli jobs submit --file ./program.sas --context-name "SAS Job Execution compute context"
+```
+
+Inspect and manage jobs:
+
+```bash
+viya-cli jobs list --limit 20
+viya-cli jobs status --id job-id
+viya-cli jobs log --id job-id
+viya-cli jobs cancel --id job-id
+```
+
+Prefer `viya-cli run` for immediate Compute execution with listing/log output.
+Use `viya-cli jobs submit` when the user asks for asynchronous Job Execution
+service behavior.
+
 ## Prompt Workflows
 
 Use these workflows directly in the conversation. Generate SAS code or analysis
@@ -137,6 +197,7 @@ credentials in generated SAS.
 - Never print credentials, tokens, passwords, or customer data unless the user explicitly provided that exact public-safe output.
 - Use `-timeout` for long-running tasks.
 - Use `-context-name` or `-context-id` when the deployment has multiple Compute contexts.
+- Use `-o json` before parsing command output in scripts, except when intentionally downloading raw file content or raw job logs.
 
 Remaining sas-mcp-server replacement work is tracked in `todo.md`. Do not
 depend on Python runtime code for the Go-only skill.
