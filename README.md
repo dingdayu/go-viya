@@ -124,6 +124,7 @@ See `examples/` for complete custom provider and workflow examples.
 - `examples/default-client`: configure and retrieve the process-wide default client.
 - `examples/batch-job`: create a file set, upload a SAS program, submit a batch job, and wait for completion.
 - `examples/cas-table-state`: load and optionally unload a CAS table.
+- `examples/viya-cli`: CLI for agents to execute SAS code and discover CAS assets.
 
 ## API Basis
 
