@@ -1,10 +1,12 @@
 package viya
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 	"time"
 
 	"go.opentelemetry.io/otel/codes"
@@ -284,22 +286,50 @@ func (c *Client) UploadBatchFile(ctx context.Context, fileSetId string, fileName
 	ctx, span := tracer.Start(ctx, "UploadBatchFile")
 	defer span.End()
 
-	contextAccept := "application/vnd.sas.error+json"
-	r, err := c.client.R().
-		SetContext(ctx).
-		SetHeader("Accept", contextAccept).
-		SetContentType("application/octet-stream").
-		SetBody(content).
-		Put(fmt.Sprintf("/batch/fileSets/%s/files/%s", fileSetId, fileName))
+	err = c.uploadBatchFileFromReader(ctx, fileSetId, fileName, bytes.NewReader(content))
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		return err
-	}
-	if !r.IsSuccess() {
-		span.SetStatus(codes.Error, r.String())
-		return fmt.Errorf("failed to upload batch file, status code: %d", r.StatusCode())
 	}
 
 	return nil
+}
+
+// UploadBatchFileFromReader uploads or replaces a file in a SAS Viya Batch file set
+// from content read from r.
+func (c *Client) UploadBatchFileFromReader(ctx context.Context, fileSetId string, fileName string, r io.Reader) (err error) {
+	ctx, span := tracer.Start(ctx, "UploadBatchFileFromReader")
+	defer span.End()
+
+	err = c.uploadBatchFileFromReader(ctx, fileSetId, fileName, r)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) uploadBatchFileFromReader(ctx context.Context, fileSetId string, fileName string, r io.Reader) (err error) {
+	contextAccept := "application/vnd.sas.error+json"
+	resp, err := c.client.R().
+		SetContext(ctx).
+		SetHeader("Accept", contextAccept).
+		SetContentType("application/octet-stream").
+		SetBody(r).
+		Put(batchFilePath(fileSetId, fileName))
+	if err != nil {
+		return err
+	}
+	if !resp.IsSuccess() {
+		return fmt.Errorf("failed to upload batch file, status code: %d", resp.StatusCode())
+	}
+
+	return nil
+}
+
+func batchFilePath(fileSetId string, fileName string) string {
+	return fmt.Sprintf("/batch/fileSets/%s/files/%s", url.PathEscape(fileSetId), url.PathEscape(fileName))
 }
 
 // BatchJob describes a SAS Viya Batch job and its execution state.
