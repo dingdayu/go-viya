@@ -14,7 +14,7 @@ This project benefits from contributors with the following skills.
 - Understand SAS Viya authentication flows and token endpoints.
 - Validate API behavior against real or representative Viya environments.
 - Document service-specific assumptions such as CAS server names and media types.
-- Keep CAS data operations, Files Service calls, and Job Execution service calls aligned with documented REST paths, media types, and status handling.
+- Keep CAS data operations, Files Service calls, reports, Visual Analytics report operations, report image rendering, and Job Execution service calls aligned with documented REST paths, media types, and status handling.
 
 ## Testing
 
