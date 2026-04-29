@@ -192,6 +192,20 @@ func writeCASText(w io.Writer, data any) error {
 	case viya.JobExecutionJob:
 		fmt.Fprintln(tw, "ID\tNAME\tSTATE\tCREATED")
 		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", v.ID, v.Name, v.State, v.CreationTimeStamp.Format(time.RFC3339))
+	case viya.ReportsResponse:
+		fmt.Fprintln(tw, "ID\tNAME\tDESCRIPTION\tCREATED BY")
+		for _, item := range v.Items {
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", item.ID, item.Name, item.Description, item.CreatedBy)
+		}
+	case viya.Report:
+		fmt.Fprintln(tw, "ID\tNAME\tDESCRIPTION\tCREATED BY")
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", v.ID, v.Name, v.Description, v.CreatedBy)
+	case viya.ReportImageJob:
+		fmt.Fprintln(tw, "ID\tSTATE\tREPORT URI\tCREATED")
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", v.ID, v.State, v.ReportURI, v.CreationTimeStamp.Format(time.RFC3339))
+	case viya.VisualAnalyticsReportResult:
+		fmt.Fprintln(tw, "REPORT ID\tNAME\tURI\tSTATUS")
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", v.ResultReportID, v.ResultReportName, v.ResultReportURI, v.Status)
 	case string:
 		_, err := fmt.Fprint(w, v)
 		if err != nil || strings.HasSuffix(v, "\n") {

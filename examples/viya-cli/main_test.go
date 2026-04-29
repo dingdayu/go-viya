@@ -364,6 +364,143 @@ func TestJobsListStatusCancelAndLogCommands(t *testing.T) {
 	}
 }
 
+func TestReportsListGetAndImageCommands(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.RequestURI == "/reports/reports?filter=contains%28name%2C%27sales%27%29&limit=3":
+			_, _ = w.Write([]byte(`{"count":1,"items":[{"id":"report-1","name":"Sales","description":"Quarterly","createdBy":"user1"}]}`))
+		case r.Method == http.MethodGet && r.RequestURI == "/reports/reports/report%201":
+			_, _ = w.Write([]byte(`{"id":"report 1","name":"Sales","description":"Quarterly","createdBy":"user1","definition":{"pages":[]}}`))
+		case r.Method == http.MethodPost && r.RequestURI == "/reportImages/jobs":
+			var body struct {
+				ReportURI    string `json:"reportUri"`
+				SectionIndex int    `json:"sectionIndex"`
+				Size         string `json:"size"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			if got, want := body.ReportURI, "/reports/reports/report%201"; got != want {
+				t.Fatalf("reportUri = %q, want %q", got, want)
+			}
+			if got, want := body.SectionIndex, 2; got != want {
+				t.Fatalf("sectionIndex = %d, want %d", got, want)
+			}
+			if got, want := body.Size, "640x480"; got != want {
+				t.Fatalf("size = %q, want %q", got, want)
+			}
+			_, _ = w.Write([]byte(`{"id":"image-job-1","state":"running","reportUri":"/reports/reports/report%201"}`))
+		default:
+			t.Fatalf("unexpected request %s %s", r.Method, r.RequestURI)
+		}
+	}))
+	defer server.Close()
+
+	stdout, _, err := executeCLI("reports", "--base-url", server.URL, "--access-token", "test-token", "-o", "json",
+		"list", "--limit", "3", "--filter-name", "sales")
+	if err != nil || !strings.Contains(stdout, `"name": "Sales"`) {
+		t.Fatalf("list stdout=%s err=%v, want Sales", stdout, err)
+	}
+
+	stdout, _, err = executeCLI("reports", "--base-url", server.URL, "--access-token", "test-token",
+		"get", "--id", "report 1")
+	if err != nil || !strings.Contains(stdout, "Sales") {
+		t.Fatalf("get stdout=%s err=%v, want Sales", stdout, err)
+	}
+
+	stdout, _, err = executeCLI("reports", "--base-url", server.URL, "--access-token", "test-token", "-o", "json",
+		"image", "--id", "report 1", "--section-index", "2", "--size", "640x480")
+	if err != nil || !strings.Contains(stdout, `"id": "image-job-1"`) {
+		t.Fatalf("image stdout=%s err=%v, want image job", stdout, err)
+	}
+}
+
+func TestReportsCommandMissingFlagWritesFailureJSON(t *testing.T) {
+	stdout, _, err := executeCLI("reports", "--base-url", "https://viya.example.com", "--access-token", "test-token", "-o", "json", "get")
+	if err == nil {
+		t.Fatal("executeCLI() error = nil, want exit error")
+	}
+	if !strings.Contains(stdout, `"ok": false`) || !strings.Contains(stdout, "--id is required") {
+		t.Fatalf("stdout = %s, want missing id failure", stdout)
+	}
+}
+
+func TestDashboardCreateCommandBuildsVisualAnalyticsRequest(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.Method, http.MethodPost; got != want {
+			t.Fatalf("method = %q, want %q", got, want)
+		}
+		if got, want := r.RequestURI, "/visualAnalytics/reports"; got != want {
+			t.Fatalf("request URI = %q, want %q", got, want)
+		}
+		var body struct {
+			ResultFolder       string           `json:"resultFolder"`
+			ResultReportName   string           `json:"resultReportName"`
+			ResultNameConflict string           `json:"resultNameConflict"`
+			Operations         []map[string]any `json:"operations"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		if got, want := body.ResultFolder, "/folders/folders/@myFolder"; got != want {
+			t.Fatalf("resultFolder = %q, want %q", got, want)
+		}
+		if got, want := body.ResultReportName, "Sales Dashboard"; got != want {
+			t.Fatalf("resultReportName = %q, want %q", got, want)
+		}
+		if got, want := body.ResultNameConflict, "replace"; got != want {
+			t.Fatalf("resultNameConflict = %q, want %q", got, want)
+		}
+		if got, want := len(body.Operations), 3; got != want {
+			t.Fatalf("operations = %d, want %d", got, want)
+		}
+		if _, ok := body.Operations[0]["addData"]; !ok {
+			t.Fatalf("first operation = %#v, want addData", body.Operations[0])
+		}
+		if _, ok := body.Operations[1]["addPage"]; !ok {
+			t.Fatalf("second operation = %#v, want addPage", body.Operations[1])
+		}
+		if _, ok := body.Operations[2]["addObject"]; !ok {
+			t.Fatalf("third operation = %#v, want addObject", body.Operations[2])
+		}
+		w.Header().Set("Content-Type", "application/vnd.sas.report.operations.results+json")
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"resultReportId":"report-1","resultReportName":"Sales Dashboard","resultReportUri":"/reports/reports/report-1","status":"Success"}`))
+	}))
+	defer server.Close()
+
+	spec := `{"pages":[{"name":"Overview","objects":[{"type":"barChart","title":"Sales by Region","category":"REGION","measure":"SALES"}]}]}`
+	stdout, _, err := executeCLIWithStdin(spec,
+		"dashboard", "--base-url", server.URL, "--access-token", "test-token", "-o", "json",
+		"create",
+		"--server", "cas-shared-default",
+		"--caslib", "Public",
+		"--table", "SALES",
+		"--name", "Sales Dashboard",
+		"--folder-uri", "/folders/folders/@myFolder",
+		"--result-name-conflict", "replace",
+		"--spec", "-",
+	)
+	if err != nil {
+		t.Fatalf("executeCLI() error = %v, stdout = %s", err, stdout)
+	}
+	if !strings.Contains(stdout, `"resultReportId": "report-1"`) {
+		t.Fatalf("stdout = %s, want dashboard result JSON", stdout)
+	}
+}
+
+func TestDashboardCreateCommandMissingSpecWritesFailureJSON(t *testing.T) {
+	stdout, _, err := executeCLI("dashboard", "--base-url", "https://viya.example.com", "--access-token", "test-token", "-o", "json",
+		"create", "--name", "Dashboard", "--folder-uri", "/folders/folders/@myFolder")
+	if err == nil {
+		t.Fatal("executeCLI() error = nil, want exit error")
+	}
+	if !strings.Contains(stdout, `"ok": false`) || !strings.Contains(stdout, "--spec is required") {
+		t.Fatalf("stdout = %s, want missing spec failure", stdout)
+	}
+}
+
 func TestFilesCommandMissingFlagWritesFailureJSON(t *testing.T) {
 	stdout, _, err := executeCLI("files", "--base-url", "https://viya.example.com", "--access-token", "test-token", "-o", "json", "download")
 	if err == nil {

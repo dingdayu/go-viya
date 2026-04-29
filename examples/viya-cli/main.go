@@ -92,6 +92,14 @@ type jobsOptions struct {
 	cfg cliConfig
 }
 
+type reportsOptions struct {
+	cfg cliConfig
+}
+
+type dashboardOptions struct {
+	cfg cliConfig
+}
+
 func main() {
 	cmd := newRootCommand(cliIO{
 		stdout: os.Stdout,
