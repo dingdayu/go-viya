@@ -71,10 +71,10 @@ func TestClientCredentialsTokenProviderRefreshUsesCurrentContext(t *testing.T) {
 	var requests int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got, want := r.URL.Path, "/SASLogon/oauth/token"; got != want {
-			t.Fatalf("path = %q, want %q", got, want)
+			t.Errorf("path = %q, want %q", got, want)
 		}
 		if got, want := r.FormValue("grant_type"), "client_credentials"; got != want {
-			t.Fatalf("grant_type = %q, want %q", got, want)
+			t.Errorf("grant_type = %q, want %q", got, want)
 		}
 
 		tokenNumber := atomic.AddInt32(&requests, 1)
@@ -84,7 +84,7 @@ func TestClientCredentialsTokenProviderRefreshUsesCurrentContext(t *testing.T) {
 			"token_type":   "bearer",
 			"expires_in":   3600,
 		}); err != nil {
-			t.Fatalf("encode token response: %v", err)
+			t.Errorf("encode token response: %v", err)
 		}
 	}))
 	defer server.Close()
