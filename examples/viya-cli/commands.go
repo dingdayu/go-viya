@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -31,6 +32,8 @@ It reads configuration from flags, environment variables, and
 	cmd.AddCommand(newDataCommand(ioStreams))
 	cmd.AddCommand(newFilesCommand(ioStreams))
 	cmd.AddCommand(newJobsCommand(ioStreams))
+	cmd.AddCommand(newReportsCommand(ioStreams))
+	cmd.AddCommand(newDashboardCommand(ioStreams))
 	return cmd
 }
 
@@ -458,6 +461,143 @@ func newJobsLogCommand(ioStreams cliIO, opts *jobsOptions) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&id, "id", "", "Job ID")
+	return cmd
+}
+
+func newReportsCommand(ioStreams cliIO) *cobra.Command {
+	opts := &reportsOptions{cfg: cliConfig{Timeout: 5 * time.Minute}}
+	cmd := &cobra.Command{
+		Use:   "reports",
+		Short: "List reports and request report image rendering",
+	}
+	addConfigFlags(cmd.PersistentFlags(), &opts.cfg)
+	cmd.AddCommand(newReportsListCommand(ioStreams, opts))
+	cmd.AddCommand(newReportsGetCommand(ioStreams, opts))
+	cmd.AddCommand(newReportsImageCommand(ioStreams, opts))
+	return cmd
+}
+
+func newReportsListCommand(ioStreams cliIO, opts *reportsOptions) *cobra.Command {
+	var limit int
+	var filterName string
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List Visual Analytics reports",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runViyaCommand(ioStreams, opts.cfg, func(ctx context.Context, client *viya.Client) (any, error) {
+				return client.GetReports(ctx, viya.ReportListOptions{Limit: limit, FilterName: filterName})
+			})
+		},
+	}
+	cmd.Flags().IntVar(&limit, "limit", 50, "Maximum reports to return")
+	cmd.Flags().StringVar(&filterName, "filter-name", "", "Optional report name substring filter")
+	return cmd
+}
+
+func newReportsGetCommand(ioStreams cliIO, opts *reportsOptions) *cobra.Command {
+	var id string
+	cmd := &cobra.Command{
+		Use:   "get",
+		Short: "Get report metadata and definition",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireFlag("id", id); err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			return runViyaCommand(ioStreams, opts.cfg, func(ctx context.Context, client *viya.Client) (any, error) {
+				return client.GetReport(ctx, id)
+			})
+		},
+	}
+	cmd.Flags().StringVar(&id, "id", "", "Report ID")
+	return cmd
+}
+
+func newReportsImageCommand(ioStreams cliIO, opts *reportsOptions) *cobra.Command {
+	var id string
+	var sectionIndex int
+	var size string
+	cmd := &cobra.Command{
+		Use:   "image",
+		Short: "Request report section image rendering",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireFlag("id", id); err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			return runViyaCommand(ioStreams, opts.cfg, func(ctx context.Context, client *viya.Client) (any, error) {
+				return client.CreateReportImageJob(ctx, viya.ReportImageJobRequest{
+					ReportID:     id,
+					SectionIndex: sectionIndex,
+					Size:         size,
+				})
+			})
+		},
+	}
+	cmd.Flags().StringVar(&id, "id", "", "Report ID")
+	cmd.Flags().IntVar(&sectionIndex, "section-index", 0, "Report section index")
+	cmd.Flags().StringVar(&size, "size", "800x600", "Rendered image size")
+	return cmd
+}
+
+func newDashboardCommand(ioStreams cliIO) *cobra.Command {
+	opts := &dashboardOptions{cfg: cliConfig{Timeout: 5 * time.Minute}}
+	cmd := &cobra.Command{
+		Use:   "dashboard",
+		Short: "Create Visual Analytics dashboards from agent-friendly specs",
+	}
+	addConfigFlags(cmd.PersistentFlags(), &opts.cfg)
+	cmd.AddCommand(newDashboardCreateCommand(ioStreams, opts))
+	return cmd
+}
+
+func newDashboardCreateCommand(ioStreams cliIO, opts *dashboardOptions) *cobra.Command {
+	var server string
+	var caslib string
+	var table string
+	var name string
+	var folderURI string
+	var specFile string
+	var resultNameConflict string
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create a Visual Analytics dashboard",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireFlag("name", name); err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			if err := requireFlag("folder-uri", folderURI); err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			if err := requireFlag("spec", specFile); err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			content, err := readInputFile(specFile, ioStreams.stdin)
+			if err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, err)
+			}
+			var spec viya.DashboardSpec
+			if err := json.Unmarshal(content, &spec); err != nil {
+				return writeCommandFailure(ioStreams.stdout, opts.cfg.Output, fmt.Errorf("decode dashboard spec: %w", err))
+			}
+			return runViyaCommand(ioStreams, opts.cfg, func(ctx context.Context, client *viya.Client) (any, error) {
+				return client.CreateDashboard(ctx, viya.CreateDashboardRequest{
+					Name:               name,
+					FolderURI:          folderURI,
+					ResultNameConflict: resultNameConflict,
+					ServerID:           server,
+					CaslibName:         caslib,
+					TableName:          table,
+					Spec:               spec,
+				})
+			})
+		},
+	}
+	cmd.Flags().StringVar(&server, "server", "", "CAS server name or ID")
+	cmd.Flags().StringVar(&caslib, "caslib", "", "CAS library name")
+	cmd.Flags().StringVar(&table, "table", "", "CAS table name")
+	cmd.Flags().StringVar(&name, "name", "", "Dashboard report name")
+	cmd.Flags().StringVar(&folderURI, "folder-uri", "", "Target folder URI")
+	cmd.Flags().StringVar(&specFile, "spec", "", "Path to dashboard JSON spec, or - for stdin")
+	cmd.Flags().StringVar(&resultNameConflict, "result-name-conflict", "rename", "Name conflict behavior: abort, rename, or replace")
 	return cmd
 }
 

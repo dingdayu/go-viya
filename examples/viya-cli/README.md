@@ -1,8 +1,9 @@
 # viya-cli
 
 `viya-cli` is a small CLI example for agent frameworks that need to execute SAS
-code on SAS Viya, discover and manage CAS data assets, use Viya files, and
-submit asynchronous Job Execution jobs.
+code on SAS Viya, discover and manage CAS data assets, use Viya files, inspect
+reports, create Visual Analytics dashboards, and submit asynchronous Job
+Execution jobs.
 
 It reads configuration from flags, environment variables, and local SAS CLI-style
 files:
@@ -115,6 +116,48 @@ viya-cli files list --limit 50
 viya-cli files list --filter-name report
 viya-cli files upload --name report.txt --file ./report.txt --content-type text/plain
 viya-cli files download --id file-id
+```
+
+List reports and request report image rendering:
+
+```bash
+viya-cli reports list --limit 50
+viya-cli reports list --filter-name sales
+viya-cli reports get --id report-id
+viya-cli reports image --id report-id --section-index 0 --size 800x600
+```
+
+Create a Visual Analytics dashboard from an agent-friendly JSON spec:
+
+```bash
+viya-cli dashboard create \
+  --server cas-shared-default \
+  --caslib Public \
+  --table HMEQ \
+  --name "HMEQ Dashboard" \
+  --folder-uri /folders/folders/@myFolder \
+  --result-name-conflict rename \
+  --spec dashboard.json
+```
+
+Example `dashboard.json`:
+
+```json
+{
+  "pages": [
+    {
+      "name": "Overview",
+      "objects": [
+        {
+          "type": "barChart",
+          "title": "Bad Rate by Job",
+          "category": "JOB",
+          "measure": "BAD"
+        }
+      ]
+    }
+  ]
+}
 ```
 
 Submit and inspect Job Execution service jobs:

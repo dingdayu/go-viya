@@ -11,10 +11,6 @@ Goals and constraints for remaining sas-mcp-server replacement work.
 
 ## Remaining Capabilities
 
-- Reports and visualization:
-  - list Visual Analytics reports
-  - get report metadata and definition
-  - request report section image rendering
 - Model management and scoring:
   - list AutoML projects
   - create and run AutoML projects
@@ -39,5 +35,7 @@ Goals and constraints for remaining sas-mcp-server replacement work.
 - Discover CAS servers, caslibs, tables, table metadata, columns, and sample rows through `viya-cli cas ...`.
 - Upload CSV data into CAS tables and promote CAS tables through `viya-cli data ...`.
 - List, upload, and download Viya Files service files through `viya-cli files ...`.
+- List reports, get report metadata and definition, and request report image rendering through `viya-cli reports ...`.
+- Create Visual Analytics dashboards from agent-friendly JSON specs through `viya-cli dashboard create`.
 - Submit, list, inspect, cancel, and retrieve logs for Job Execution jobs through `viya-cli jobs ...`.
 - Provide an agent skill guide that uses `viya-cli` instead of an MCP service.

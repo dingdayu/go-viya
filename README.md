@@ -4,7 +4,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/dingdayu/go-viya.svg)](https://pkg.go.dev/github.com/dingdayu/go-viya)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dingdayu/go-viya)](https://goreportcard.com/report/github.com/dingdayu/go-viya)
 
-`go-viya` is a Go client library for selected SAS Viya REST APIs. It follows the REST protocols and media types documented at <https://developer.sas.com/rest-apis>, and provides token providers, a Resty-backed client, and helpers for identities, configuration, batch, CAS table operations, files, and Job Execution jobs.
+`go-viya` is a Go client library for selected SAS Viya REST APIs. It follows the REST protocols and media types documented at <https://developer.sas.com/rest-apis>, and provides token providers, a Resty-backed client, and helpers for identities, configuration, batch, CAS table operations, files, reports, Visual Analytics dashboards, and Job Execution jobs.
 
 ## Installation
 
@@ -124,7 +124,7 @@ See `examples/` for complete custom provider and workflow examples.
 - `examples/default-client`: configure and retrieve the process-wide default client.
 - `examples/batch-job`: create a file set, upload a SAS program, submit a batch job, and wait for completion.
 - `examples/cas-table-state`: load and optionally unload a CAS table.
-- `examples/viya-cli`: CLI for agents to execute SAS code, discover and manage CAS data, use Viya files, and submit Job Execution jobs.
+- `examples/viya-cli`: CLI for agents to execute SAS code, discover and manage CAS data, use Viya files, inspect reports, create Visual Analytics dashboards, and submit Job Execution jobs.
 
 ## API Basis
 
@@ -176,6 +176,12 @@ Current implemented areas include:
   - Promote CAS tables to global scope.
 - Files:
   - List, upload, and download SAS Viya Files Service files.
+- Reports:
+  - List Visual Analytics reports.
+  - Read report metadata and definition.
+  - Request report section image rendering.
+  - Create Visual Analytics reports with operations.
+  - Create simple dashboards from agent-friendly dashboard specs.
 - Job Execution:
   - Submit SAS code as an asynchronous Job Execution job.
   - List, inspect, cancel, and retrieve logs for Job Execution jobs.

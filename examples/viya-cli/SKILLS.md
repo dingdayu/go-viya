@@ -1,13 +1,14 @@
 ---
 name: sas-viya
-description: Use this skill when you need to execute SAS code, discover or manage CAS data, use Viya files, or submit Job Execution jobs on SAS Viya through the Go viya-cli example. It replaces SAS MCP server style workflows with direct CLI calls and supports text or JSON output.
+description: Use this skill when you need to execute SAS code, discover or manage CAS data, use Viya files, inspect reports, create Visual Analytics dashboards, or submit Job Execution jobs on SAS Viya through the Go viya-cli example. It replaces SAS MCP server style workflows with direct CLI calls and supports text or JSON output.
 ---
 
 # viya-cli Agent Skill
 
 Use `viya-cli` when an agent needs to execute SAS code, discover or manage CAS
-data assets, exchange files, or submit asynchronous jobs on SAS Viya. It is a
-Go-only CLI; do not start a Python MCP server for this workflow.
+data assets, exchange files, inspect reports, create Visual Analytics
+dashboards, or submit asynchronous jobs on SAS Viya. It is a Go-only CLI; do
+not start a Python MCP server for this workflow.
 
 ## Setup
 
@@ -150,6 +151,282 @@ viya-cli files download --id file-id
 ```
 
 Use `-o json` for file metadata. File downloads write raw content in text mode.
+
+## Reports
+
+In SAS Viya, a dashboard is a Visual Analytics report. Use the word
+**report** for the persisted Viya resource and use **dashboard** for the
+agent-friendly workflow that creates a report with pages and visual objects.
+
+Use `reports` commands when the report already exists or when you need metadata,
+definition, or a rendered preview. Use `dashboard create` when the user asks to
+build a new dashboard from data and intent.
+
+List Visual Analytics reports:
+
+```bash
+viya-cli reports list --limit 50
+viya-cli reports list --filter-name sales
+```
+
+Get report metadata and definition:
+
+```bash
+viya-cli reports get --id report-id
+```
+
+Request report section image rendering:
+
+```bash
+viya-cli reports image --id report-id --section-index 0 --size 800x600
+```
+
+Use `-o json` for report definitions and report image job details. After
+creating a dashboard, call `viya-cli reports image` with the returned
+`resultReportId` when the user wants a preview or confirmation that rendering
+was requested.
+
+## Dashboards
+
+Create dashboards when the user asks for a chart, report page, scorecard,
+summary view, business dashboard, operational dashboard, KPI view, or visual
+analytics report based on a CAS table.
+
+Dashboard creation uses a compact JSON spec that agents can generate from chat
+intent. The CLI converts this spec into Visual Analytics report operations:
+
+- `addData` for the CAS table.
+- `addPage` for each page in the spec.
+- `addObject` for each visual object.
+- raw `operations`, when present, appended after the generated operations.
+
+Basic command:
+
+```bash
+viya-cli dashboard create \
+  --server cas-shared-default \
+  --caslib Public \
+  --table HMEQ \
+  --name "HMEQ Dashboard" \
+  --folder-uri /folders/folders/@myFolder \
+  --spec dashboard.json
+```
+
+Use `--result-name-conflict rename` by default. Use `replace` only when the user
+explicitly wants to overwrite an existing report name in the target folder.
+
+### Dashboard Creation Workflow
+
+Follow this workflow for chat-driven dashboard requests:
+
+1. Identify the target data.
+   If the user gives a table, use it. If not, ask for the CAS server, caslib,
+   and table, or discover candidates:
+
+```bash
+viya-cli cas servers
+viya-cli cas caslibs --server cas-shared-default
+viya-cli cas tables --server cas-shared-default --caslib Public
+```
+
+2. Inspect columns before choosing visuals:
+
+```bash
+viya-cli cas columns --server cas-shared-default --caslib Public --table HMEQ -o json
+viya-cli cas rows --server cas-shared-default --caslib Public --table HMEQ --limit 10 -o json
+```
+
+Use column metadata and sample rows to infer field roles:
+
+- Categorical fields are good `category` values for bar charts.
+- Numeric business metrics are good `measure` values.
+- Dates or timestamps are good candidates for trend pages, but only use them
+  when the user asks for time analysis or the field is clearly temporal.
+- Avoid using IDs, free-text notes, keys, or high-cardinality identifiers as
+  chart categories unless the user explicitly asks for them.
+
+3. Translate the user's intent into pages and visuals.
+   Keep the first version small and useful. Prefer 1-3 pages and 1-4 objects per
+   page. Name pages and titles in business language from the user's request.
+
+4. Generate a dashboard spec. The common object shape is:
+
+```json
+{
+  "type": "barChart",
+  "title": "Bad Rate by Job",
+  "category": "JOB",
+  "measure": "BAD"
+}
+```
+
+Use `measures` when a visual should compare multiple numeric fields:
+
+```json
+{
+  "type": "barChart",
+  "title": "Loan and Mortgage by Region",
+  "category": "REGION",
+  "measures": ["LOAN", "MORTDUE"]
+}
+```
+
+Use `dataRoles` for advanced Visual Analytics roles that do not fit
+`category`/`measure`:
+
+```json
+{
+  "type": "barChart",
+  "title": "Sales by Segment",
+  "dataRoles": {
+    "category": "SEGMENT",
+    "measures": ["SALES"]
+  }
+}
+```
+
+5. Create the dashboard:
+
+```bash
+viya-cli dashboard create \
+  --server cas-shared-default \
+  --caslib Public \
+  --table HMEQ \
+  --name "HMEQ Risk Dashboard" \
+  --folder-uri /folders/folders/@myFolder \
+  --spec dashboard.json \
+  -o json
+```
+
+6. Use the JSON response. On success, read `data.resultReportId`,
+   `data.resultReportUri`, and `data.status`. Then list or inspect the report:
+
+```bash
+viya-cli reports get --id report-id -o json
+viya-cli reports image --id report-id --section-index 0 --size 800x600 -o json
+```
+
+### Spec Examples
+
+Single-page dashboard:
+
+```json
+{
+  "pages": [
+    {
+      "name": "Overview",
+      "objects": [
+        {
+          "type": "barChart",
+          "title": "Bad Rate by Job",
+          "category": "JOB",
+          "measure": "BAD"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Multi-page dashboard:
+
+```json
+{
+  "pages": [
+    {
+      "name": "Executive Summary",
+      "objects": [
+        {
+          "type": "barChart",
+          "title": "Bad Rate by Job",
+          "category": "JOB",
+          "measure": "BAD"
+        },
+        {
+          "type": "barChart",
+          "title": "Average Loan by Reason",
+          "category": "REASON",
+          "measure": "LOAN"
+        }
+      ]
+    },
+    {
+      "name": "Portfolio Detail",
+      "objects": [
+        {
+          "type": "barChart",
+          "title": "Debt-to-Income by Job",
+          "category": "JOB",
+          "measure": "DEBTINC"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Advanced spec with raw Visual Analytics operations:
+
+```json
+{
+  "pages": [
+    {
+      "name": "Overview",
+      "objects": []
+    }
+  ],
+  "operations": [
+    {
+      "operationId": "customText",
+      "includeObjectInResponse": true,
+      "addObject": {
+        "object": {
+          "text": {
+            "options": {
+              "content": "Dashboard generated from a chat request."
+            }
+          }
+        },
+        "placement": {
+          "page": {
+            "target": "Overview",
+            "position": "end"
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
+### Choosing Visuals From User Requests
+
+- "Show distribution" or "breakdown by X": use a bar chart with `category=X`.
+- "Compare metric Y by group X": use a bar chart with `category=X`,
+  `measure=Y`.
+- "Executive dashboard": create an overview page with the most important
+  categorical breakdowns and numeric metrics.
+- "Risk dashboard": include target/risk indicators first, then explainers such
+  as job, reason, region, or score bands if those fields exist.
+- "Sales dashboard": prioritize revenue/sales measures by time, region,
+  product, segment, or channel, depending on available columns.
+- "Data quality dashboard": prefer counts, missingness indicators, duplicate
+  flags, validity flags, and rule-failure measures if available.
+
+If the requested visual cannot be represented by the compact spec, use raw
+`operations` only when you know the Visual Analytics operation shape. Otherwise,
+create the closest conservative dashboard and explain the limitation in the chat
+response.
+
+### Dashboard Safety
+
+- Do not invent table names or columns. Discover them first or ask the user.
+- Do not create a dashboard against sensitive data unless the user has clearly
+  requested that table and output.
+- Do not use `replace` conflict behavior unless the user asked to overwrite.
+- Keep generated specs deterministic and small enough for review.
+- Prefer `-o json` for dashboard creation so the agent can capture the created
+  report ID.
 
 ## Job Execution
 
