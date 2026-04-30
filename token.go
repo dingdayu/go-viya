@@ -73,8 +73,8 @@ type ClientCredentialsTokenProvider struct {
 	clientSecret string
 	httpClient   *http.Client
 
-	mu          sync.Mutex
-	tokenSource oauth2.TokenSource
+	mu    sync.Mutex
+	token *oauth2.Token
 }
 
 func (p *ClientCredentialsTokenProvider) tokenURL() string {
@@ -99,26 +99,27 @@ func (p *ClientCredentialsTokenProvider) tokenContext(ctx context.Context) conte
 	return context.WithValue(ctx, oauth2.HTTPClient, p.httpClient)
 }
 
-// Token returns a bearer token from SAS Logon, refreshing it through oauth2.TokenSource as needed.
+// Token returns a bearer token from SAS Logon, refreshing the cached token as needed.
 func (p *ClientCredentialsTokenProvider) Token(ctx context.Context) (string, error) {
 	p.mu.Lock()
-	if p.tokenSource == nil {
-		oauthCfg := &clientcredentials.Config{
-			ClientID:     p.clientID,
-			ClientSecret: p.clientSecret,
-			TokenURL:     p.tokenURL(),
-			AuthStyle:    oauth2.AuthStyleAutoDetect,
-		}
-		p.tokenSource = oauthCfg.TokenSource(p.tokenContext(ctx))
-	}
-	src := p.tokenSource
-	p.mu.Unlock()
+	defer p.mu.Unlock()
 
-	tok, err := src.Token()
+	if p.token.Valid() {
+		return p.token.AccessToken, nil
+	}
+
+	oauthCfg := &clientcredentials.Config{
+		ClientID:     p.clientID,
+		ClientSecret: p.clientSecret,
+		TokenURL:     p.tokenURL(),
+		AuthStyle:    oauth2.AuthStyleAutoDetect,
+	}
+	tok, err := oauthCfg.Token(p.tokenContext(ctx))
 	if err != nil || tok == nil || tok.AccessToken == "" {
 		return "", ErrViyaAuthFailed
 	}
 
+	p.token = tok
 	return tok.AccessToken, nil
 }
 
@@ -131,35 +132,39 @@ type PasswordTokenProvider struct {
 	password string
 }
 
-// Token returns a bearer token for the configured username and password.
+// Token returns a bearer token for the configured username and password, refreshing the cached token as needed.
 func (p *PasswordTokenProvider) Token(ctx context.Context) (string, error) {
 	p.mu.Lock()
-	if p.tokenSource == nil {
-		conf := &oauth2.Config{
-			ClientID:     p.clientID,
-			ClientSecret: p.clientSecret,
-			Endpoint: oauth2.Endpoint{
-				TokenURL:  p.tokenURL(),
-				AuthStyle: oauth2.AuthStyleInParams,
-			},
-		}
+	defer p.mu.Unlock()
 
-		tokenCtx := p.tokenContext(ctx)
-		tok, err := conf.PasswordCredentialsToken(tokenCtx, p.username, p.password)
-		if err != nil {
-			p.mu.Unlock()
-			return "", ErrViyaAuthFailed
-		}
-		p.tokenSource = conf.TokenSource(tokenCtx, tok)
+	if p.token.Valid() {
+		return p.token.AccessToken, nil
 	}
-	src := p.tokenSource
-	p.mu.Unlock()
 
-	tok, err := src.Token()
+	conf := &oauth2.Config{
+		ClientID:     p.clientID,
+		ClientSecret: p.clientSecret,
+		Endpoint: oauth2.Endpoint{
+			TokenURL:  p.tokenURL(),
+			AuthStyle: oauth2.AuthStyleInParams,
+		},
+	}
+
+	tokenCtx := p.tokenContext(ctx)
+	var (
+		tok *oauth2.Token
+		err error
+	)
+	if p.token == nil {
+		tok, err = conf.PasswordCredentialsToken(tokenCtx, p.username, p.password)
+	} else {
+		tok, err = conf.TokenSource(tokenCtx, p.token).Token()
+	}
 	if err != nil || tok == nil || tok.AccessToken == "" {
 		return "", ErrViyaAuthFailed
 	}
 
+	p.token = tok
 	return tok.AccessToken, nil
 }
 
@@ -169,35 +174,39 @@ type AuthCodeTokenProvider struct {
 	code string
 }
 
-// Token exchanges the configured authorization code for a bearer token, then refreshes it as needed.
+// Token exchanges the configured authorization code for a bearer token, then refreshes the cached token as needed.
 func (p *AuthCodeTokenProvider) Token(ctx context.Context) (string, error) {
 	p.mu.Lock()
-	if p.tokenSource == nil {
-		conf := &oauth2.Config{
-			ClientID:     p.clientID,
-			ClientSecret: p.clientSecret,
-			Endpoint: oauth2.Endpoint{
-				TokenURL:  p.tokenURL(),
-				AuthStyle: oauth2.AuthStyleInParams,
-			},
-		}
+	defer p.mu.Unlock()
 
-		tokenCtx := p.tokenContext(ctx)
-		tok, err := conf.Exchange(tokenCtx, p.code)
-		if err != nil {
-			p.mu.Unlock()
-			return "", ErrViyaAuthFailed
-		}
-		p.tokenSource = conf.TokenSource(tokenCtx, tok)
+	if p.token.Valid() {
+		return p.token.AccessToken, nil
 	}
-	src := p.tokenSource
-	p.mu.Unlock()
 
-	tok, err := src.Token()
+	conf := &oauth2.Config{
+		ClientID:     p.clientID,
+		ClientSecret: p.clientSecret,
+		Endpoint: oauth2.Endpoint{
+			TokenURL:  p.tokenURL(),
+			AuthStyle: oauth2.AuthStyleInParams,
+		},
+	}
+
+	tokenCtx := p.tokenContext(ctx)
+	var (
+		tok *oauth2.Token
+		err error
+	)
+	if p.token == nil {
+		tok, err = conf.Exchange(tokenCtx, p.code)
+	} else {
+		tok, err = conf.TokenSource(tokenCtx, p.token).Token()
+	}
 	if err != nil || tok == nil || tok.AccessToken == "" {
 		return "", ErrViyaAuthFailed
 	}
 
+	p.token = tok
 	return tok.AccessToken, nil
 }
 
@@ -221,7 +230,6 @@ func newCredentialBase(options tokenProviderOptions, requireSecret bool) (*Clien
 		clientID:     clientID,
 		clientSecret: clientSecret,
 		httpClient:   newTokenHTTPClient(false),
-		tokenSource:  nil,
 	}, nil
 }
 
