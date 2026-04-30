@@ -25,13 +25,29 @@ go test -race ./...
 
 ## Commit Style
 
-Use short, imperative commit messages:
+Use Conventional Commits so Release Please can choose the next version and
+write release notes:
 
 ```text
-Add batch file set deletion errors
-Fix token provider refresh race
-Document CAS table loading
+feat: add batch file set deletion errors
+fix: refresh tokens with request context
+docs: document CAS table loading
 ```
+
+Use `feat:` for minor releases, `fix:` for patch releases, and `!` or a
+`BREAKING CHANGE:` footer for breaking changes.
+
+## Releases
+
+Release Please manages release pull requests, `CHANGELOG.md`, tags, and GitHub
+Releases from commits merged to `main`.
+
+1. Merge changes with Conventional Commit messages.
+2. Review and merge the Release Please pull request.
+3. The Release Please workflow creates the tag and GitHub Release.
+4. The same workflow runs GoReleaser when a release is created.
+
+The manual GoReleaser workflow remains available for explicitly pushed tags.
 
 ## Compatibility
 
