@@ -10,22 +10,22 @@ import (
 
 // GetComputeJobLog returns log lines for a SAS Viya Compute job.
 func (c *Client) GetComputeJobLog(ctx context.Context, sessionId string, jobId string) (resp ComputeLogLinesResponse, err error) {
-	return c.getComputeLogLines(ctx, "GetComputeJobLog", fmt.Sprintf("%s/log", computeJobPath(sessionId, jobId)), "failed to get compute job log")
+	return c.getComputeLogLines(ctx, "GetComputeJobLog", fmt.Sprintf("/compute/sessions/%s/jobs/%s/log", sessionId, jobId), "failed to get compute job log")
 }
 
 // GetComputeJobListing returns listing lines for a SAS Viya Compute job.
 func (c *Client) GetComputeJobListing(ctx context.Context, sessionId string, jobId string) (resp ComputeLogLinesResponse, err error) {
-	return c.getComputeLogLines(ctx, "GetComputeJobListing", fmt.Sprintf("%s/listing", computeJobPath(sessionId, jobId)), "failed to get compute job listing")
+	return c.getComputeLogLines(ctx, "GetComputeJobListing", fmt.Sprintf("/compute/sessions/%s/jobs/%s/listing", sessionId, jobId), "failed to get compute job listing")
 }
 
 // GetComputeJobLogText returns the job log as plain text.
 func (c *Client) GetComputeJobLogText(ctx context.Context, sessionId string, jobId string) (text string, err error) {
-	return c.getComputeText(ctx, "GetComputeJobLogText", fmt.Sprintf("%s/log", computeJobPath(sessionId, jobId)), "failed to get compute job log text")
+	return c.getComputeText(ctx, "GetComputeJobLogText", fmt.Sprintf("/compute/sessions/%s/jobs/%s/log", sessionId, jobId), "failed to get compute job log text")
 }
 
 // GetComputeJobListingText returns the job listing as plain text.
 func (c *Client) GetComputeJobListingText(ctx context.Context, sessionId string, jobId string) (text string, err error) {
-	return c.getComputeText(ctx, "GetComputeJobListingText", fmt.Sprintf("%s/listing", computeJobPath(sessionId, jobId)), "failed to get compute job listing text")
+	return c.getComputeText(ctx, "GetComputeJobListingText", fmt.Sprintf("/compute/sessions/%s/jobs/%s/listing", sessionId, jobId), "failed to get compute job listing text")
 }
 
 func (c *Client) getComputeLogLines(ctx context.Context, spanName string, path string, operation string) (resp ComputeLogLinesResponse, err error) {

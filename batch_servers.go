@@ -3,7 +3,6 @@ package viya
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"time"
 
 	"go.opentelemetry.io/otel/codes"
@@ -65,7 +64,7 @@ func (c *Client) GetBatchServerInfo(ctx context.Context, serverId string) (resp 
 		SetContext(ctx).
 		SetHeader("Accept", contextAccept).
 		SetResult(&resp).
-		Get(batchServerPath(serverId))
+		Get(fmt.Sprintf("/batch/servers/%s", serverId))
 	if err != nil {
 		return resp, err
 	}
@@ -85,7 +84,7 @@ func (c *Client) DeleteBatchServer(ctx context.Context, serverId string) (err er
 	r, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Accept", "application/vnd.sas.error+json").
-		Delete(batchServerPath(serverId))
+		Delete(fmt.Sprintf("/batch/servers/%s", serverId))
 	if err != nil {
 		return err
 	}
@@ -95,8 +94,4 @@ func (c *Client) DeleteBatchServer(ctx context.Context, serverId string) (err er
 	}
 
 	return nil
-}
-
-func batchServerPath(serverId string) string {
-	return fmt.Sprintf("/batch/servers/%s", url.PathEscape(serverId))
 }

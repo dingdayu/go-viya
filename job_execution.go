@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"strings"
 	"time"
 
@@ -96,7 +95,7 @@ func (c *Client) GetJobExecutionJob(ctx context.Context, jobID string) (resp Job
 		SetContext(ctx).
 		SetHeader("Accept", "application/json, application/vnd.sas.error+json").
 		SetResult(&resp).
-		Get(jobExecutionJobPath(jobID))
+		Get(fmt.Sprintf("/jobExecution/jobs/%s", jobID))
 	if err != nil {
 		return resp, err
 	}
@@ -135,7 +134,7 @@ func (c *Client) CancelJobExecutionJob(ctx context.Context, jobID string) (err e
 	r, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Accept", "application/vnd.sas.error+json").
-		Delete(jobExecutionJobPath(jobID))
+		Delete(fmt.Sprintf("/jobExecution/jobs/%s", jobID))
 	if err != nil {
 		return err
 	}
@@ -200,8 +199,4 @@ func jobExecutionLogURI(results map[string]string) string {
 		}
 	}
 	return ""
-}
-
-func jobExecutionJobPath(jobID string) string {
-	return fmt.Sprintf("/jobExecution/jobs/%s", url.PathEscape(jobID))
 }

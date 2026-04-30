@@ -3,7 +3,6 @@ package viya
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"time"
 
 	"go.opentelemetry.io/otel/codes"
@@ -66,7 +65,7 @@ func (c *Client) GetComputeContextInfo(ctx context.Context, contextId string) (r
 		SetContext(ctx).
 		SetHeader("Accept", contextAccept).
 		SetResult(&resp).
-		Get(computeContextPath(contextId))
+		Get(fmt.Sprintf("/compute/contexts/%s", contextId))
 	if err != nil {
 		return resp, err
 	}
@@ -76,8 +75,4 @@ func (c *Client) GetComputeContextInfo(ctx context.Context, contextId string) (r
 	}
 
 	return resp, nil
-}
-
-func computeContextPath(contextId string) string {
-	return fmt.Sprintf("/compute/contexts/%s", url.PathEscape(contextId))
 }

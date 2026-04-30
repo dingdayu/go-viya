@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"strings"
 	"time"
 
@@ -100,7 +99,7 @@ func (c *Client) DownloadFile(ctx context.Context, fileID string) (content []byt
 	r, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Accept", "application/octet-stream, application/vnd.sas.error+json").
-		Get(fmt.Sprintf("/files/files/%s/content", url.PathEscape(fileID)))
+		Get(fmt.Sprintf("/files/files/%s/content", fileID))
 	if err != nil {
 		return nil, err
 	}

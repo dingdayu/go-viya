@@ -59,7 +59,7 @@ func (c *Client) GetBatchFileInfo(ctx context.Context, fileSetId string, fileNam
 		SetContext(ctx).
 		SetHeader("Accept", contextAccept).
 		SetResult(&resp).
-		Get(fmt.Sprintf("/batch/fileSets/%s/files/%s", fileSetId, fileName))
+		Get(fmt.Sprintf("/batch/fileSets/%s/files/%s", fileSetId, url.PathEscape(fileName)))
 	if err != nil {
 		return resp, err
 	}
@@ -79,7 +79,7 @@ func (c *Client) DownloadBatchFile(ctx context.Context, fileSetId string, fileNa
 	r, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Accept", "application/octet-stream").
-		Get(fmt.Sprintf("/batch/fileSets/%s/files/%s", fileSetId, fileName))
+		Get(fmt.Sprintf("/batch/fileSets/%s/files/%s", fileSetId, url.PathEscape(fileName)))
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (c *Client) uploadBatchFileFromReader(ctx context.Context, fileSetId string
 		SetHeader("Accept", contextAccept).
 		SetContentType("application/octet-stream").
 		SetBody(r).
-		Put(batchFilePath(fileSetId, fileName))
+		Put(fmt.Sprintf("/batch/fileSets/%s/files/%s", fileSetId, url.PathEscape(fileName)))
 	if err != nil {
 		return err
 	}
@@ -144,8 +144,4 @@ func (c *Client) uploadBatchFileFromReader(ctx context.Context, fileSetId string
 	}
 
 	return nil
-}
-
-func batchFilePath(fileSetId string, fileName string) string {
-	return fmt.Sprintf("/batch/fileSets/%s/files/%s", url.PathEscape(fileSetId), url.PathEscape(fileName))
 }

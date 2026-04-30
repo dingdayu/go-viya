@@ -3,6 +3,7 @@ package viya
 import (
 	"context"
 	"fmt"
+	"net/url"
 )
 
 // SAS Viya CAS Management API reference:
@@ -25,7 +26,7 @@ func (c *Client) LoadCASTableToMemory(ctx context.Context, serverID string, casl
 		SetContext(ctx).
 		SetQueryParam("value", "loaded").
 		SetBody(body).
-		Put(fmt.Sprintf("%s/state", casTablePath(serverID, caslibName, tableName)))
+		Put(fmt.Sprintf("/casManagement/servers/%s/caslibs/%s/tables/%s/state", serverID, url.PathEscape(caslibName), url.PathEscape(tableName)))
 	if err != nil {
 		return err
 	}
@@ -44,7 +45,7 @@ func (c *Client) UnloadCASTableFromMemory(ctx context.Context, serverID string, 
 	resp, err := c.client.R().
 		SetContext(ctx).
 		SetQueryParam("value", "unloaded").
-		Put(fmt.Sprintf("%s/state", casTablePath(serverID, caslibName, tableName)))
+		Put(fmt.Sprintf("/casManagement/servers/%s/caslibs/%s/tables/%s/state", serverID, url.PathEscape(caslibName), url.PathEscape(tableName)))
 	if err != nil {
 		return err
 	}

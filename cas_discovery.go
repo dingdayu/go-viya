@@ -103,7 +103,7 @@ func (c *Client) GetCASLibs(ctx context.Context, serverID string, opts ListOptio
 
 	r, err := c.collectionRequest(ctx, opts).
 		SetResult(&resp).
-		Get(fmt.Sprintf("%s/caslibs", casServerPath(serverID)))
+		Get(fmt.Sprintf("/casManagement/servers/%s/caslibs", serverID))
 	if err != nil {
 		return resp, err
 	}
@@ -122,7 +122,7 @@ func (c *Client) GetCASTables(ctx context.Context, serverID string, caslibName s
 
 	r, err := c.collectionRequest(ctx, opts).
 		SetResult(&resp).
-		Get(fmt.Sprintf("%s/tables", caslibPath(serverID, caslibName)))
+		Get(fmt.Sprintf("/casManagement/servers/%s/caslibs/%s/tables", serverID, url.PathEscape(caslibName)))
 	if err != nil {
 		return resp, err
 	}
@@ -143,7 +143,7 @@ func (c *Client) GetCASTableInfo(ctx context.Context, serverID string, caslibNam
 		SetContext(ctx).
 		SetHeader("Accept", "application/json, application/vnd.sas.error+json").
 		SetResult(&resp).
-		Get(casTablePath(serverID, caslibName, tableName))
+		Get(fmt.Sprintf("/casManagement/servers/%s/caslibs/%s/tables/%s", serverID, url.PathEscape(caslibName), url.PathEscape(tableName)))
 	if err != nil {
 		return resp, err
 	}
@@ -162,7 +162,7 @@ func (c *Client) GetCASTableColumns(ctx context.Context, serverID string, caslib
 
 	r, err := c.collectionRequest(ctx, opts).
 		SetResult(&resp).
-		Get(fmt.Sprintf("%s/columns", casTablePath(serverID, caslibName, tableName)))
+		Get(fmt.Sprintf("/casManagement/servers/%s/caslibs/%s/tables/%s/columns", serverID, url.PathEscape(caslibName), url.PathEscape(tableName)))
 	if err != nil {
 		return resp, err
 	}
@@ -278,18 +278,6 @@ func (c *Client) collectionRequest(ctx context.Context, opts ListOptions) *resty
 		req.SetQueryParam("limit", fmt.Sprintf("%d", opts.Limit))
 	}
 	return req
-}
-
-func casServerPath(serverID string) string {
-	return fmt.Sprintf("/casManagement/servers/%s", url.PathEscape(serverID))
-}
-
-func caslibPath(serverID string, caslibName string) string {
-	return fmt.Sprintf("%s/caslibs/%s", casServerPath(serverID), url.PathEscape(caslibName))
-}
-
-func casTablePath(serverID string, caslibName string, tableName string) string {
-	return fmt.Sprintf("%s/tables/%s", caslibPath(serverID, caslibName), url.PathEscape(tableName))
 }
 
 func casDataSourceID(serverID string, caslibName string) string {

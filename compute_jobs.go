@@ -3,7 +3,6 @@ package viya
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
@@ -54,7 +53,7 @@ func (c *Client) CreateComputeJob(ctx context.Context, sessionId string, req Cre
 		SetContentType("application/json").
 		SetBody(req).
 		SetResult(&resp).
-		Post(computeJobsPath(sessionId))
+		Post(fmt.Sprintf("/compute/sessions/%s/jobs", sessionId))
 	if err != nil {
 		return resp, err
 	}
@@ -76,7 +75,7 @@ func (c *Client) GetComputeJobsList(ctx context.Context, sessionId string) (resp
 		SetContext(ctx).
 		SetHeader("Accept", contextAccept).
 		SetResult(&resp).
-		Get(computeJobsPath(sessionId))
+		Get(fmt.Sprintf("/compute/sessions/%s/jobs", sessionId))
 	if err != nil {
 		return resp, err
 	}
@@ -98,7 +97,7 @@ func (c *Client) GetComputeJobInfo(ctx context.Context, sessionId string, jobId 
 		SetContext(ctx).
 		SetHeader("Accept", contextAccept).
 		SetResult(&resp).
-		Get(computeJobPath(sessionId, jobId))
+		Get(fmt.Sprintf("/compute/sessions/%s/jobs/%s", sessionId, jobId))
 	if err != nil {
 		return resp, err
 	}
@@ -118,7 +117,7 @@ func (c *Client) DeleteComputeJob(ctx context.Context, sessionId string, jobId s
 	r, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Accept", "application/vnd.sas.error+json").
-		Delete(computeJobPath(sessionId, jobId))
+		Delete(fmt.Sprintf("/compute/sessions/%s/jobs/%s", sessionId, jobId))
 	if err != nil {
 		return err
 	}
@@ -138,7 +137,7 @@ func (c *Client) GetComputeJobState(ctx context.Context, sessionId string, jobId
 	r, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Accept", "text/plain, application/vnd.sas.error+json").
-		Get(fmt.Sprintf("%s/state", computeJobPath(sessionId, jobId)))
+		Get(fmt.Sprintf("/compute/sessions/%s/jobs/%s/state", sessionId, jobId))
 	if err != nil {
 		return "", err
 	}
@@ -165,7 +164,7 @@ func (c *Client) SetComputeJobState(ctx context.Context, sessionId string, jobId
 		req.SetHeader("If-Match", ifMatch)
 	}
 
-	r, err := req.Put(fmt.Sprintf("%s/state", computeJobPath(sessionId, jobId)))
+	r, err := req.Put(fmt.Sprintf("/compute/sessions/%s/jobs/%s/state", sessionId, jobId))
 	if err != nil {
 		return "", err
 	}
@@ -180,12 +179,4 @@ func (c *Client) SetComputeJobState(ctx context.Context, sessionId string, jobId
 // CancelComputeJob requests cancellation of a SAS Viya Compute job.
 func (c *Client) CancelComputeJob(ctx context.Context, sessionId string, jobId string, ifMatch string) (state string, err error) {
 	return c.SetComputeJobState(ctx, sessionId, jobId, "canceled", ifMatch)
-}
-
-func computeJobsPath(sessionId string) string {
-	return fmt.Sprintf("%s/jobs", computeSessionPath(sessionId))
-}
-
-func computeJobPath(sessionId string, jobId string) string {
-	return fmt.Sprintf("%s/%s", computeJobsPath(sessionId), url.PathEscape(jobId))
 }

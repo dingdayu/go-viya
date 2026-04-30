@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 
 	"go.opentelemetry.io/otel/codes"
 )
@@ -38,7 +39,7 @@ func (c *Client) UploadCSVToCASTableFromReader(ctx context.Context, serverID str
 		}).
 		SetMultipartField("file", "data.csv", "text/csv", r).
 		SetResult(&resp).
-		Post(fmt.Sprintf("%s/tables", caslibPath(serverID, caslibName)))
+		Post(fmt.Sprintf("/casManagement/servers/%s/caslibs/%s/tables", serverID, url.PathEscape(caslibName)))
 	if err != nil {
 		return resp, err
 	}
@@ -63,7 +64,7 @@ func (c *Client) PromoteCASTable(ctx context.Context, serverID string, caslibNam
 		SetContentType("application/json").
 		SetBody(map[string]any{"scope": "global"}).
 		SetResult(&resp).
-		Post(casTablePath(serverID, caslibName, tableName))
+		Post(fmt.Sprintf("/casManagement/servers/%s/caslibs/%s/tables/%s", serverID, url.PathEscape(caslibName), url.PathEscape(tableName)))
 	if err != nil {
 		return resp, err
 	}

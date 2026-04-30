@@ -3,7 +3,6 @@ package viya
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
@@ -168,7 +167,7 @@ func (c *Client) SendBatchJobInput(ctx context.Context, jobId string, input []st
 			Input:   input,
 			Version: 1,
 		}).
-		Post(fmt.Sprintf("%s/input", batchJobPath(jobId)))
+		Post(fmt.Sprintf("/batch/jobs/%s/input", jobId))
 	if err != nil {
 		return err
 	}
@@ -197,7 +196,7 @@ func (c *Client) GetBatchJobOutput(ctx context.Context, jobId string) (resp Batc
 		SetContext(ctx).
 		SetHeader("Accept", contextAccept).
 		SetResult(&resp).
-		Post(fmt.Sprintf("%s/output", batchJobPath(jobId)))
+		Post(fmt.Sprintf("/batch/jobs/%s/output", jobId))
 	if err != nil {
 		return resp, err
 	}
@@ -217,7 +216,7 @@ func (c *Client) GetBatchJobState(ctx context.Context, jobId string) (state stri
 	r, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Accept", "text/plain, application/vnd.sas.error+json").
-		Get(fmt.Sprintf("%s/state", batchJobPath(jobId)))
+		Get(fmt.Sprintf("/batch/jobs/%s/state", jobId))
 	if err != nil {
 		return "", err
 	}
@@ -238,7 +237,7 @@ func (c *Client) CancelBatchJob(ctx context.Context, jobId string) (err error) {
 		SetContext(ctx).
 		SetHeader("Accept", "application/vnd.sas.error+json").
 		SetQueryParam("value", "canceled").
-		Put(fmt.Sprintf("%s/state", batchJobPath(jobId)))
+		Put(fmt.Sprintf("/batch/jobs/%s/state", jobId))
 	if err != nil {
 		return err
 	}
@@ -248,10 +247,6 @@ func (c *Client) CancelBatchJob(ctx context.Context, jobId string) (err error) {
 	}
 
 	return nil
-}
-
-func batchJobPath(jobId string) string {
-	return fmt.Sprintf("/batch/jobs/%s", url.PathEscape(jobId))
 }
 
 // WaitBatchJobCompleted polls a SAS Viya Batch job until it reaches a terminal state.

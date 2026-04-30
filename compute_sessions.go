@@ -3,7 +3,6 @@ package viya
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
@@ -56,7 +55,7 @@ func (c *Client) CreateComputeSession(ctx context.Context, contextId string, req
 		SetContentType("application/json").
 		SetBody(req).
 		SetResult(&resp).
-		Post(fmt.Sprintf("%s/sessions", computeContextPath(contextId)))
+		Post(fmt.Sprintf("/compute/contexts/%s/sessions", contextId))
 	if err != nil {
 		return resp, err
 	}
@@ -101,7 +100,7 @@ func (c *Client) GetComputeSessionInfo(ctx context.Context, sessionId string) (r
 		SetContext(ctx).
 		SetHeader("Accept", contextAccept).
 		SetResult(&resp).
-		Get(computeSessionPath(sessionId))
+		Get(fmt.Sprintf("/compute/sessions/%s", sessionId))
 	if err != nil {
 		return resp, err
 	}
@@ -121,7 +120,7 @@ func (c *Client) DeleteComputeSession(ctx context.Context, sessionId string) (er
 	r, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Accept", "application/vnd.sas.error+json").
-		Delete(computeSessionPath(sessionId))
+		Delete(fmt.Sprintf("/compute/sessions/%s", sessionId))
 	if err != nil {
 		return err
 	}
@@ -141,7 +140,7 @@ func (c *Client) GetComputeSessionState(ctx context.Context, sessionId string) (
 	r, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Accept", "text/plain, application/vnd.sas.error+json").
-		Get(fmt.Sprintf("%s/state", computeSessionPath(sessionId)))
+		Get(fmt.Sprintf("/compute/sessions/%s/state", sessionId))
 	if err != nil {
 		return "", err
 	}
@@ -168,7 +167,7 @@ func (c *Client) SetComputeSessionState(ctx context.Context, sessionId string, s
 		req.SetHeader("If-Match", ifMatch)
 	}
 
-	r, err := req.Put(fmt.Sprintf("%s/state", computeSessionPath(sessionId)))
+	r, err := req.Put(fmt.Sprintf("/compute/sessions/%s/state", sessionId))
 	if err != nil {
 		return "", err
 	}
@@ -183,8 +182,4 @@ func (c *Client) SetComputeSessionState(ctx context.Context, sessionId string, s
 // CancelComputeSession requests cancellation of running work in a SAS Viya Compute session.
 func (c *Client) CancelComputeSession(ctx context.Context, sessionId string, ifMatch string) (state string, err error) {
 	return c.SetComputeSessionState(ctx, sessionId, "canceled", ifMatch)
-}
-
-func computeSessionPath(sessionId string) string {
-	return fmt.Sprintf("/compute/sessions/%s", url.PathEscape(sessionId))
 }
