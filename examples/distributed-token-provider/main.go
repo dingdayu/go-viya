@@ -62,7 +62,10 @@ func main() {
 	}
 
 	provider := distributedTokenProvider{cache: cache}
-	client := viya.NewClient(ctx, baseURL, viya.WithTokenProvider(provider))
+	client, err := viya.NewClient(ctx, baseURL, viya.WithTokenProvider(provider))
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	users, err := client.GetIdentitiesUsers(ctx)
 	if err != nil {

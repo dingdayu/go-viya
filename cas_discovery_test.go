@@ -29,7 +29,10 @@ func TestGetCASServersRequestsCollection(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL, WithTokenProvider(staticTokenProvider("token-value")))
+	client, err := NewClient(context.Background(), server.URL, WithTokenProvider(staticTokenProvider("token-value")))
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	servers, err := client.GetCASServers(context.Background(), ListOptions{Limit: 10})
 	if err != nil {
@@ -54,7 +57,10 @@ func TestGetCASTablesEscapesPathAndSetsPaging(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	tables, err := client.GetCASTables(context.Background(), "server 1", "Public Data", ListOptions{Start: 5, Limit: 25})
 	if err != nil {
@@ -71,9 +77,12 @@ func TestGetCASTableColumnsReturnsStatusError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
-	_, err := client.GetCASTableColumns(context.Background(), "server-1", "Public", "missing", ListOptions{})
+	_, err = client.GetCASTableColumns(context.Background(), "server-1", "Public", "missing", ListOptions{})
 	if err == nil {
 		t.Fatal("GetCASTableColumns() error = nil, want error")
 	}
@@ -107,7 +116,10 @@ func TestGetCASTableRowsUsesDataTablesAndRowSets(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	rows, err := client.GetCASTableRows(context.Background(), "server 1", "Public Data", "class table", ListOptions{Start: 2, Limit: 3})
 	if err != nil {

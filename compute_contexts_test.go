@@ -24,7 +24,10 @@ func TestGetComputeContextsRequestsFullItems(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	contexts, err := client.GetComputeContexts(context.Background())
 	if err != nil {
@@ -49,7 +52,10 @@ func TestGetComputeContextInfoEscapesContextID(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	contextInfo, err := client.GetComputeContextInfo(context.Background(), "context 1")
 	if err != nil {

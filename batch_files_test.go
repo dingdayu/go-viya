@@ -38,9 +38,12 @@ func TestUploadBatchFileFromReaderSendsFileContent(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
-	err := client.UploadBatchFileFromReader(context.Background(), "file set 1", "program one.sas", strings.NewReader(body))
+	err = client.UploadBatchFileFromReader(context.Background(), "file set 1", "program one.sas", strings.NewReader(body))
 	if err != nil {
 		t.Fatalf("UploadBatchFileFromReader() error = %v", err)
 	}
@@ -52,9 +55,12 @@ func TestUploadBatchFileFromReaderReturnsStatusError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
-	err := client.UploadBatchFileFromReader(context.Background(), "file-set-1", "program.sas", strings.NewReader("body"))
+	err = client.UploadBatchFileFromReader(context.Background(), "file-set-1", "program.sas", strings.NewReader("body"))
 	if err == nil {
 		t.Fatal("UploadBatchFileFromReader() error = nil, want error")
 	}

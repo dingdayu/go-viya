@@ -24,7 +24,10 @@ func TestGetBatchContextByNameSendsNameQuery(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	batchContext, err := client.GetBatchContextByName(context.Background(), "default context")
 	if err != nil {

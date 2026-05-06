@@ -24,7 +24,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	client := viya.NewClient(ctx, baseURL, viya.WithTokenProvider(tokens))
+	client, err := viya.NewClient(ctx, baseURL, viya.WithTokenProvider(tokens))
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if err := client.LoadCASTableToMemory(ctx, serverID, caslib, table, true, scope); err != nil {
 		log.Fatal(err)

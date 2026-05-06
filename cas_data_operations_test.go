@@ -46,7 +46,10 @@ func TestUploadCSVToCASTableFromReaderSendsMultipart(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL, WithTokenProvider(staticTokenProvider("token-value")))
+	client, err := NewClient(context.Background(), server.URL, WithTokenProvider(staticTokenProvider("token-value")))
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	table, err := client.UploadCSVToCASTableFromReader(context.Background(), "server 1", "Public Data", "class table", strings.NewReader(csv))
 	if err != nil {
@@ -66,9 +69,12 @@ func TestUploadCSVToCASTableReturnsConflictStatusError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
-	_, err := client.UploadCSVToCASTable(context.Background(), "server-1", "Public", "class", []byte("x\n"))
+	_, err = client.UploadCSVToCASTable(context.Background(), "server-1", "Public", "class", []byte("x\n"))
 	if err == nil {
 		t.Fatal("UploadCSVToCASTable() error = nil, want error")
 	}
@@ -97,7 +103,10 @@ func TestPromoteCASTableSendsScopeBody(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	table, err := client.PromoteCASTable(context.Background(), "server 1", "Public Data", "class table")
 	if err != nil {
@@ -114,9 +123,12 @@ func TestPromoteCASTableReturnsStatusError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
-	_, err := client.PromoteCASTable(context.Background(), "server-1", "Public", "missing")
+	_, err = client.PromoteCASTable(context.Background(), "server-1", "Public", "missing")
 	if err == nil {
 		t.Fatal("PromoteCASTable() error = nil, want error")
 	}

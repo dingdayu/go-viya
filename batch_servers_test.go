@@ -21,7 +21,10 @@ func TestGetBatchServersListDecodesServers(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	servers, err := client.GetBatchServersList(context.Background())
 	if err != nil {
@@ -55,7 +58,10 @@ func TestGetBatchServerInfoDecodesServer(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	serverInfo, err := client.GetBatchServerInfo(context.Background(), "server 1")
 	if err != nil {
@@ -85,9 +91,12 @@ func TestDeleteBatchServerSendsDelete(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
-	err := client.DeleteBatchServer(context.Background(), "server 1")
+	err = client.DeleteBatchServer(context.Background(), "server 1")
 	if err != nil {
 		t.Fatalf("DeleteBatchServer() error = %v", err)
 	}

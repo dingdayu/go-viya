@@ -22,7 +22,10 @@ func TestNewClientSetsBearerAuthorizationHeader(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL, WithTokenProvider(staticTokenProvider("token-value")))
+	client, err := NewClient(context.Background(), server.URL, WithTokenProvider(staticTokenProvider("token-value")))
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	resp, err := client.client.R().SetContext(context.Background()).Get("/")
 	if err != nil {

@@ -39,9 +39,12 @@ func TestLoadCASTableToMemorySetsLoadedState(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
-	err := client.LoadCASTableToMemory(context.Background(), "server 1", "Public Data", "class table", true, "global")
+	err = client.LoadCASTableToMemory(context.Background(), "server 1", "Public Data", "class table", true, "global")
 	if err != nil {
 		t.Fatalf("LoadCASTableToMemory() error = %v", err)
 	}
@@ -60,9 +63,12 @@ func TestUnloadCASTableFromMemorySetsUnloadedState(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
-	err := client.UnloadCASTableFromMemory(context.Background(), "server-1", "Public", "class")
+	err = client.UnloadCASTableFromMemory(context.Background(), "server-1", "Public", "class")
 	if err != nil {
 		t.Fatalf("UnloadCASTableFromMemory() error = %v", err)
 	}
@@ -74,9 +80,12 @@ func TestUnloadCASTableFromMemoryReturnsStatusError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
-	err := client.UnloadCASTableFromMemory(context.Background(), "server-1", "Public", "class")
+	err = client.UnloadCASTableFromMemory(context.Background(), "server-1", "Public", "class")
 	if err == nil {
 		t.Fatal("UnloadCASTableFromMemory() error = nil, want error")
 	}

@@ -35,7 +35,10 @@ func TestGetFilesSetsPagingFilterAndAuth(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL, WithTokenProvider(staticTokenProvider("token-value")))
+	client, err := NewClient(context.Background(), server.URL, WithTokenProvider(staticTokenProvider("token-value")))
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	files, err := client.GetFiles(context.Background(), FileListOptions{Start: 2, Limit: 7, FilterName: "report"})
 	if err != nil {
@@ -75,7 +78,10 @@ func TestUploadFileFromReaderSendsHeadersAndBody(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	file, err := client.UploadFileFromReader(context.Background(), "report.txt", "text/plain", strings.NewReader(body))
 	if err != nil {
@@ -95,7 +101,10 @@ func TestDownloadFileEscapesIDAndReturnsBytes(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	content, err := client.DownloadFile(context.Background(), "file 1")
 	if err != nil {
@@ -112,9 +121,12 @@ func TestDownloadFileReturnsStatusError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
-	_, err := client.DownloadFile(context.Background(), "missing")
+	_, err = client.DownloadFile(context.Background(), "missing")
 	if err == nil {
 		t.Fatal("DownloadFile() error = nil, want error")
 	}

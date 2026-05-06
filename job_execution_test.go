@@ -50,7 +50,10 @@ func TestSubmitJobExecutionCodeSendsBody(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL, WithTokenProvider(staticTokenProvider("token-value")))
+	client, err := NewClient(context.Background(), server.URL, WithTokenProvider(staticTokenProvider("token-value")))
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	job, err := client.SubmitJobExecutionCode(context.Background(), SubmitJobExecutionCodeRequest{
 		Name:        "job one",
@@ -75,7 +78,10 @@ func TestGetJobExecutionJobsSetsPaging(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	jobs, err := client.GetJobExecutionJobs(context.Background(), ListOptions{Start: 3, Limit: 20})
 	if err != nil {
@@ -107,7 +113,10 @@ func TestGetAndCancelJobExecutionJobEscapeID(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	job, err := client.GetJobExecutionJob(context.Background(), "job 1")
 	if err != nil {
@@ -138,7 +147,10 @@ func TestGetJobExecutionJobLogPrefersLogTxt(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	log, err := client.GetJobExecutionJobLog(context.Background(), "job-1")
 	if err != nil {
@@ -165,7 +177,10 @@ func TestGetJobExecutionJobLogFallsBackToLogAndNoLogMessage(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	log, err := client.GetJobExecutionJobLog(context.Background(), "job-log")
 	if err != nil {

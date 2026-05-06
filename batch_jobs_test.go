@@ -43,9 +43,12 @@ func TestSendBatchJobInputSendsLines(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
-	err := client.SendBatchJobInput(context.Background(), "job 1", []string{"first\n", "second\n"})
+	err = client.SendBatchJobInput(context.Background(), "job 1", []string{"first\n", "second\n"})
 	if err != nil {
 		t.Fatalf("SendBatchJobInput() error = %v", err)
 	}
@@ -68,7 +71,10 @@ func TestGetBatchJobOutputDecodesOutput(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	output, err := client.GetBatchJobOutput(context.Background(), "job-1")
 	if err != nil {
@@ -102,7 +108,10 @@ func TestGetBatchJobStateReturnsPlainTextState(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	state, err := client.GetBatchJobState(context.Background(), "job-1")
 	if err != nil {
@@ -132,9 +141,12 @@ func TestCancelBatchJobSetsCanceledState(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
-	err := client.CancelBatchJob(context.Background(), "job-1")
+	err = client.CancelBatchJob(context.Background(), "job-1")
 	if err != nil {
 		t.Fatalf("CancelBatchJob() error = %v", err)
 	}
@@ -159,7 +171,10 @@ func TestWaitBatchJobCompletedReturnsFinalJobDetails(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	jobInfo, err := client.WaitBatchJobCompleted(context.Background(), "job-1", time.Millisecond)
 	if err != nil {
@@ -197,7 +212,10 @@ func TestWaitBatchJobCompletedReturnsMostRecentJobOnError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	jobInfo, err := client.WaitBatchJobCompleted(context.Background(), "job-1", time.Millisecond)
 	if err == nil {
@@ -222,7 +240,10 @@ func TestWaitBatchJobCompletedReturnsContextError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 

@@ -29,7 +29,12 @@ func newConfiguredClient(cfg cliConfig) (*viya.Client, context.Context, context.
 		return nil, nil, nil, cfg, err
 	}
 
-	return viya.NewClient(ctx, cfg.BaseURL, viya.WithTokenProvider(provider)), ctx, cancel, cfg, nil
+	client, err := viya.NewClient(ctx, cfg.BaseURL, viya.WithTokenProvider(provider))
+	if err != nil {
+		cancel()
+		return nil, nil, nil, cfg, err
+	}
+	return client, ctx, cancel, cfg, nil
 }
 
 func (c *cliConfig) loadDefaults() error {

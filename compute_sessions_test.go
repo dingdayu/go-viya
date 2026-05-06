@@ -38,7 +38,10 @@ func TestCreateComputeSessionSendsRequest(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	session, err := client.CreateComputeSession(context.Background(), "context 1", CreateComputeSessionRequest{
 		Name:        "session one",
@@ -66,7 +69,10 @@ func TestGetComputeSessionStateReturnsPlainTextState(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	state, err := client.GetComputeSessionState(context.Background(), "session-1")
 	if err != nil {
@@ -97,7 +103,10 @@ func TestCancelComputeSessionSendsIfMatch(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	state, err := client.CancelComputeSession(context.Background(), "session-1", `"etag-1"`)
 	if err != nil {
@@ -121,7 +130,10 @@ func TestDeleteComputeSessionAcceptsAcceptedStatus(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	if err := client.DeleteComputeSession(context.Background(), "session-1"); err != nil {
 		t.Fatalf("DeleteComputeSession() error = %v", err)
