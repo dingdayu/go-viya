@@ -131,7 +131,7 @@ func (p *ClientCredentialsTokenProvider) Token(ctx context.Context) (string, err
 	}
 	tok, err := oauthCfg.Token(p.tokenContext(ctx))
 	if err != nil {
-		return "", fmt.Errorf("viya auth failed: %w", err)
+		return "", fmt.Errorf("%w: %v", ErrViyaAuthFailed, err)
 	}
 	if tok == nil || tok.AccessToken == "" {
 		return "", ErrViyaAuthFailed
@@ -179,7 +179,7 @@ func (p *PasswordTokenProvider) Token(ctx context.Context) (string, error) {
 		tok, err = conf.TokenSource(tokenCtx, p.token).Token()
 	}
 	if err != nil {
-		return "", fmt.Errorf("viya auth failed: %w", err)
+		return "", fmt.Errorf("%w: %v", ErrViyaAuthFailed, err)
 	}
 	if tok == nil || tok.AccessToken == "" {
 		return "", ErrViyaAuthFailed
@@ -224,7 +224,7 @@ func (p *AuthCodeTokenProvider) Token(ctx context.Context) (string, error) {
 		tok, err = conf.TokenSource(tokenCtx, p.token).Token()
 	}
 	if err != nil {
-		return "", fmt.Errorf("viya auth failed: %w", err)
+		return "", fmt.Errorf("%w: %v", ErrViyaAuthFailed, err)
 	}
 	if tok == nil || tok.AccessToken == "" {
 		return "", ErrViyaAuthFailed

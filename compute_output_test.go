@@ -21,7 +21,10 @@ func TestGetComputeJobLogDecodesLines(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	log, err := client.GetComputeJobLog(context.Background(), "session-1", "0")
 	if err != nil {
@@ -49,7 +52,10 @@ func TestGetComputeJobListingTextReturnsPlainText(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	text, err := client.GetComputeJobListingText(context.Background(), "session-1", "0")
 	if err != nil {

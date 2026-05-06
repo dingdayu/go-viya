@@ -35,11 +35,11 @@ func WithAuthMiddleware(mw resty.RequestMiddleware) Option {
 	}
 }
 
-// WithTokenProvider configures a provider that supplies bearer tokens for each request.
-// Token lookup happens lazily in request middleware so callers' contexts can cancel token fetches.
-func WithTokenProvider(provider TokenProvider) Option {
+// WithTokenProvider configures the client to use the given TokenProvider for authentication.
+// It is mutually exclusive with WithAuthMiddleware; if both are set, WithAuthMiddleware takes precedence.
+func WithTokenProvider(tp TokenProvider) Option {
 	return func(o *clientOptions) {
-		o.tokenProvider = provider
+		o.tokenProvider = tp
 	}
 }
 
@@ -62,9 +62,9 @@ type Client struct {
 //
 // The ctx parameter is reserved for future context-aware initialization.
 // Callers may pass context.Background() if no specific context is needed.
-func NewClient(ctx context.Context, baseURL string, opts ...Option) *Client {
+func NewClient(ctx context.Context, baseURL string, opts ...Option) (*Client, error) {
 	if _, err := url.Parse(baseURL); err != nil {
-		panic(fmt.Sprintf("invalid baseURL %q: %v", baseURL, err))
+		return nil, fmt.Errorf("invalid baseURL %q: %w", baseURL, err)
 	}
 
 	cfg := &clientOptions{
@@ -106,7 +106,7 @@ func NewClient(ctx context.Context, baseURL string, opts ...Option) *Client {
 		})
 	}
 
-	return result
+	return result, nil
 }
 
 // TokenURL returns the SAS Logon OAuth2 token endpoint for the client's base URL.

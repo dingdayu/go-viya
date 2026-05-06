@@ -23,7 +23,10 @@ func TestGetDefaultClientReturnsConfiguredClient(t *testing.T) {
 		SetDefaultClient(nil)
 	})
 
-	want := NewClient(context.Background(), "https://viya.example.com")
+	want, err := NewClient(context.Background(), "https://viya.example.com")
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 	SetDefaultClient(want)
 
 	got, err := GetDefaultClient()
@@ -53,7 +56,10 @@ func TestMustGetDefaultClientReturnsConfiguredClient(t *testing.T) {
 		SetDefaultClient(nil)
 	})
 
-	want := NewClient(context.Background(), "https://viya.example.com")
+	want, err := NewClient(context.Background(), "https://viya.example.com")
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 	SetDefaultClient(want)
 
 	if got := MustGetDefaultClient(); got != want {

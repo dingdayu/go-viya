@@ -33,7 +33,10 @@ func TestCreateComputeJobSendsCode(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	job, err := client.CreateComputeJob(context.Background(), "session 1", CreateComputeJobRequest{
 		Code: []string{"data _null_;", "run;"},
@@ -57,7 +60,10 @@ func TestGetComputeJobsListDecodesJobs(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	jobs, err := client.GetComputeJobsList(context.Background(), "session-1")
 	if err != nil {
@@ -91,7 +97,10 @@ func TestCancelComputeJobSendsIfMatch(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
 	state, err := client.CancelComputeJob(context.Background(), "session-1", "0", `"job-etag"`)
 	if err != nil {
@@ -108,9 +117,12 @@ func TestGetComputeJobStateReturnsStatusError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	client, err := NewClient(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
 
-	_, err := client.GetComputeJobState(context.Background(), "session-1", "0")
+	_, err = client.GetComputeJobState(context.Background(), "session-1", "0")
 	if err == nil {
 		t.Fatal("GetComputeJobState() error = nil, want error")
 	}
