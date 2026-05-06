@@ -3,6 +3,7 @@ package viya
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"sync"
 
@@ -17,6 +18,20 @@ const defaultClientID = "go-viya"
 
 // ErrViyaAuthFailed is returned when SAS Viya authentication cannot produce a bearer token.
 var ErrViyaAuthFailed = errors.New("viya authentication failed")
+
+// ErrInvalidParameter is returned when required parameters are missing or invalid.
+type ErrInvalidParameter struct {
+	Parameter string
+	Reason    string
+}
+
+func (e *ErrInvalidParameter) Error() string {
+	return fmt.Sprintf("invalid parameter %s: %s", e.Parameter, e.Reason)
+}
+
+func (e *ErrInvalidParameter) Unwrap() error {
+	return nil
+}
 
 // TokenProvider supplies bearer tokens for authenticated SAS Viya requests.
 //
@@ -115,7 +130,10 @@ func (p *ClientCredentialsTokenProvider) Token(ctx context.Context) (string, err
 		AuthStyle:    oauth2.AuthStyleAutoDetect,
 	}
 	tok, err := oauthCfg.Token(p.tokenContext(ctx))
-	if err != nil || tok == nil || tok.AccessToken == "" {
+	if err != nil {
+		return "", fmt.Errorf("viya auth failed: %w", err)
+	}
+	if tok == nil || tok.AccessToken == "" {
 		return "", ErrViyaAuthFailed
 	}
 
@@ -160,7 +178,10 @@ func (p *PasswordTokenProvider) Token(ctx context.Context) (string, error) {
 	} else {
 		tok, err = conf.TokenSource(tokenCtx, p.token).Token()
 	}
-	if err != nil || tok == nil || tok.AccessToken == "" {
+	if err != nil {
+		return "", fmt.Errorf("viya auth failed: %w", err)
+	}
+	if tok == nil || tok.AccessToken == "" {
 		return "", ErrViyaAuthFailed
 	}
 
@@ -202,7 +223,10 @@ func (p *AuthCodeTokenProvider) Token(ctx context.Context) (string, error) {
 	} else {
 		tok, err = conf.TokenSource(tokenCtx, p.token).Token()
 	}
-	if err != nil || tok == nil || tok.AccessToken == "" {
+	if err != nil {
+		return "", fmt.Errorf("viya auth failed: %w", err)
+	}
+	if tok == nil || tok.AccessToken == "" {
 		return "", ErrViyaAuthFailed
 	}
 
@@ -216,13 +240,13 @@ func newCredentialBase(options tokenProviderOptions, requireSecret bool) (*Clien
 	clientSecret := options.clientSecret
 
 	if baseURL == "" {
-		return nil, ErrViyaAuthFailed
+		return nil, &ErrInvalidParameter{Parameter: "baseURL", Reason: "must not be empty"}
 	}
 	if clientID == "" {
 		clientID = defaultClientID
 	}
 	if requireSecret && clientSecret == "" {
-		return nil, ErrViyaAuthFailed
+		return nil, &ErrInvalidParameter{Parameter: "clientSecret", Reason: "must not be empty for client credentials flow"}
 	}
 
 	return &ClientCredentialsTokenProvider{
@@ -257,14 +281,17 @@ func providerOptions(baseURL string, opts ...TokenProviderOption) tokenProviderO
 // baseURL must be the SAS Viya deployment root. Use WithOAuthClient to override
 // the default OAuth client ID or provide a client secret.
 func NewPasswordTokenProvider(baseURL, username, password string, opts ...TokenProviderOption) (TokenProvider, error) {
-	if username == "" || password == "" {
-		return nil, ErrViyaAuthFailed
+	if username == "" {
+		return nil, &ErrInvalidParameter{Parameter: "username", Reason: "must not be empty"}
+	}
+	if password == "" {
+		return nil, &ErrInvalidParameter{Parameter: "password", Reason: "must not be empty"}
 	}
 
 	options := providerOptions(baseURL, opts...)
 	base, err := newCredentialBase(options, false)
 	if err != nil {
-		return nil, ErrViyaAuthFailed
+		return nil, err
 	}
 
 	return &PasswordTokenProvider{
@@ -280,13 +307,13 @@ func NewPasswordTokenProvider(baseURL, username, password string, opts ...TokenP
 // OAuth client registration that issued the code.
 func NewAuthCodeTokenProvider(baseURL, code string, opts ...TokenProviderOption) (TokenProvider, error) {
 	if code == "" {
-		return nil, ErrViyaAuthFailed
+		return nil, &ErrInvalidParameter{Parameter: "code", Reason: "must not be empty"}
 	}
 
 	options := providerOptions(baseURL, opts...)
 	base, err := newCredentialBase(options, false)
 	if err != nil {
-		return nil, ErrViyaAuthFailed
+		return nil, err
 	}
 
 	return &AuthCodeTokenProvider{
@@ -306,7 +333,7 @@ func NewClientCredentialsTokenProvider(baseURL, clientID, clientSecret string) (
 		clientSecret: clientSecret,
 	}, true)
 	if err != nil {
-		return nil, ErrViyaAuthFailed
+		return nil, err
 	}
 
 	return base, nil

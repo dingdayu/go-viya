@@ -83,13 +83,8 @@ func (c *Client) GetIdentitiesLDAPUser(ctx context.Context) (map[string]any, err
 	return config.Items[0], nil
 }
 
-// PatchIdentitiesLDAPGroup updates the LDAP provider configuration with the supplied values.
-//
-// NOTE: Despite the method name, this updates the LDAP user provider configuration.
-// The name is preserved for source compatibility.
-func (c *Client) PatchIdentitiesLDAPGroup(ctx context.Context, updates map[string]any) (bool, error) {
-	// NOTE: Despite the name, this updates the LDAP user provider configuration.
-	// Keeping the name to avoid breaking external callers.
+// PatchIdentitiesLDAPUser updates the LDAP provider configuration with the supplied values.
+func (c *Client) PatchIdentitiesLDAPUser(ctx context.Context, updates map[string]any) (bool, error) {
 	conf, err := c.GetIdentitiesLDAPUser(ctx)
 	if err != nil {
 		return false, err
@@ -160,7 +155,7 @@ func (c *Client) UpdateIdentitiesLDAPObjectFilter(ctx context.Context, usernames
 	updates := map[string]any{
 		"objectFilter": fmt.Sprintf("(&(|%s)(objectClass=user))", strings.Join(accountNames, "")),
 	}
-	success, err := c.PatchIdentitiesLDAPGroup(ctx, updates)
+	success, err := c.PatchIdentitiesLDAPUser(ctx, updates)
 	if err != nil {
 		return false, fmt.Errorf("updating LDAP object filter for %s: %w", strings.Join(usernames, ", "), err)
 	}

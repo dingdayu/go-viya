@@ -15,6 +15,16 @@ import (
 // library and table. replace controls whether an existing in-memory table can be
 // replaced, and scope is passed to the CAS Management API state-change request.
 func (c *Client) LoadCASTableToMemory(ctx context.Context, serverID string, caslibName string, tableName string, replace bool, scope string) error {
+	if serverID == "" {
+		return &ErrInvalidParameter{Parameter: "serverID", Reason: "must not be empty"}
+	}
+	if caslibName == "" {
+		return &ErrInvalidParameter{Parameter: "caslibName", Reason: "must not be empty"}
+	}
+	if tableName == "" {
+		return &ErrInvalidParameter{Parameter: "tableName", Reason: "must not be empty"}
+	}
+
 	body := map[string]any{
 		"outputCaslibName": caslibName,
 		"outputTableName":  tableName,
@@ -42,6 +52,16 @@ func (c *Client) LoadCASTableToMemory(ctx context.Context, serverID string, casl
 // In SAS Visual Analytics workflows, unloading a table can let reports reload
 // the latest source data the next time they access the table.
 func (c *Client) UnloadCASTableFromMemory(ctx context.Context, serverID string, caslibName string, tableName string) error {
+	if serverID == "" {
+		return &ErrInvalidParameter{Parameter: "serverID", Reason: "must not be empty"}
+	}
+	if caslibName == "" {
+		return &ErrInvalidParameter{Parameter: "caslibName", Reason: "must not be empty"}
+	}
+	if tableName == "" {
+		return &ErrInvalidParameter{Parameter: "tableName", Reason: "must not be empty"}
+	}
+
 	resp, err := c.client.R().
 		SetContext(ctx).
 		SetQueryParam("value", "unloaded").

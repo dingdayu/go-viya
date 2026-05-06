@@ -18,6 +18,16 @@ import (
 // The CSV data should include a header row. The target table is created in
 // caslibName on serverID using the supplied tableName.
 func (c *Client) UploadCSVToCASTable(ctx context.Context, serverID string, caslibName string, tableName string, csv []byte) (resp CASTable, err error) {
+	if serverID == "" {
+		return resp, &ErrInvalidParameter{Parameter: "serverID", Reason: "must not be empty"}
+	}
+	if caslibName == "" {
+		return resp, &ErrInvalidParameter{Parameter: "caslibName", Reason: "must not be empty"}
+	}
+	if tableName == "" {
+		return resp, &ErrInvalidParameter{Parameter: "tableName", Reason: "must not be empty"}
+	}
+
 	return c.UploadCSVToCASTableFromReader(ctx, serverID, caslibName, tableName, bytes.NewReader(csv))
 }
 
@@ -26,6 +36,16 @@ func (c *Client) UploadCSVToCASTable(ctx context.Context, serverID string, casli
 // The CSV data should include a header row. The target table is created in
 // caslibName on serverID using the supplied tableName.
 func (c *Client) UploadCSVToCASTableFromReader(ctx context.Context, serverID string, caslibName string, tableName string, r io.Reader) (resp CASTable, err error) {
+	if serverID == "" {
+		return resp, &ErrInvalidParameter{Parameter: "serverID", Reason: "must not be empty"}
+	}
+	if caslibName == "" {
+		return resp, &ErrInvalidParameter{Parameter: "caslibName", Reason: "must not be empty"}
+	}
+	if tableName == "" {
+		return resp, &ErrInvalidParameter{Parameter: "tableName", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "UploadCSVToCASTableFromReader")
 	defer span.End()
 
@@ -55,6 +75,16 @@ func (c *Client) UploadCSVToCASTableFromReader(ctx context.Context, serverID str
 //
 // A promoted table is visible outside the session that created it.
 func (c *Client) PromoteCASTable(ctx context.Context, serverID string, caslibName string, tableName string) (resp CASTable, err error) {
+	if serverID == "" {
+		return resp, &ErrInvalidParameter{Parameter: "serverID", Reason: "must not be empty"}
+	}
+	if caslibName == "" {
+		return resp, &ErrInvalidParameter{Parameter: "caslibName", Reason: "must not be empty"}
+	}
+	if tableName == "" {
+		return resp, &ErrInvalidParameter{Parameter: "tableName", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "PromoteCASTable")
 	defer span.End()
 

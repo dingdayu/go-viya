@@ -93,6 +93,10 @@ func (c *Client) UploadFileFromReader(ctx context.Context, fileName string, cont
 
 // DownloadFile downloads content from the SAS Viya Files Service.
 func (c *Client) DownloadFile(ctx context.Context, fileID string) (content []byte, err error) {
+	if fileID == "" {
+		return nil, &ErrInvalidParameter{Parameter: "fileID", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "DownloadFile")
 	defer span.End()
 

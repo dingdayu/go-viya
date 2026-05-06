@@ -45,6 +45,10 @@ type CreateComputeSessionRequest struct {
 
 // CreateComputeSession creates a Compute session from the specified context definition.
 func (c *Client) CreateComputeSession(ctx context.Context, contextId string, req CreateComputeSessionRequest) (resp ComputeSession, err error) {
+	if contextId == "" {
+		return resp, &ErrInvalidParameter{Parameter: "contextId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "CreateComputeSession")
 	defer span.End()
 
@@ -92,6 +96,10 @@ func (c *Client) GetComputeSessionsList(ctx context.Context) (resp ComputeSessio
 
 // GetComputeSessionInfo returns information about a SAS Viya Compute session.
 func (c *Client) GetComputeSessionInfo(ctx context.Context, sessionId string) (resp ComputeSession, err error) {
+	if sessionId == "" {
+		return resp, &ErrInvalidParameter{Parameter: "sessionId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetComputeSessionInfo")
 	defer span.End()
 
@@ -114,6 +122,10 @@ func (c *Client) GetComputeSessionInfo(ctx context.Context, sessionId string) (r
 
 // DeleteComputeSession deletes a SAS Viya Compute session.
 func (c *Client) DeleteComputeSession(ctx context.Context, sessionId string) (err error) {
+	if sessionId == "" {
+		return &ErrInvalidParameter{Parameter: "sessionId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "DeleteComputeSession")
 	defer span.End()
 
@@ -134,6 +146,10 @@ func (c *Client) DeleteComputeSession(ctx context.Context, sessionId string) (er
 
 // GetComputeSessionState returns the plain-text state for a SAS Viya Compute session.
 func (c *Client) GetComputeSessionState(ctx context.Context, sessionId string) (state string, err error) {
+	if sessionId == "" {
+		return "", &ErrInvalidParameter{Parameter: "sessionId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetComputeSessionState")
 	defer span.End()
 
@@ -156,6 +172,10 @@ func (c *Client) GetComputeSessionState(ctx context.Context, sessionId string) (
 //
 // SAS Viya requires the current ETag in ifMatch for this operation.
 func (c *Client) SetComputeSessionState(ctx context.Context, sessionId string, state string, ifMatch string) (newState string, err error) {
+	if sessionId == "" {
+		return "", &ErrInvalidParameter{Parameter: "sessionId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "SetComputeSessionState")
 	defer span.End()
 
@@ -181,5 +201,9 @@ func (c *Client) SetComputeSessionState(ctx context.Context, sessionId string, s
 
 // CancelComputeSession requests cancellation of running work in a SAS Viya Compute session.
 func (c *Client) CancelComputeSession(ctx context.Context, sessionId string, ifMatch string) (state string, err error) {
+	if sessionId == "" {
+		return "", &ErrInvalidParameter{Parameter: "sessionId", Reason: "must not be empty"}
+	}
+
 	return c.SetComputeSessionState(ctx, sessionId, "canceled", ifMatch)
 }

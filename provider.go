@@ -1,12 +1,18 @@
 package viya
 
-import "errors"
+import (
+	"errors"
+	"sync"
+)
 
 // ErrDefaultClientNotSet is returned when the process-wide default client has
 // not been configured.
 var ErrDefaultClientNotSet = errors.New("viya default client is not set")
 
-var defaultClient *Client
+var (
+	defaultClientMu sync.RWMutex
+	defaultClient   *Client
+)
 
 // SetDefaultClient stores the process-wide default client.
 //
@@ -14,6 +20,8 @@ var defaultClient *Client
 // applications that want package-level wiring around a single SAS Viya deployment.
 // Passing nil clears the default client.
 func SetDefaultClient(client *Client) {
+	defaultClientMu.Lock()
+	defer defaultClientMu.Unlock()
 	defaultClient = client
 }
 
@@ -22,6 +30,8 @@ func SetDefaultClient(client *Client) {
 // It returns ErrDefaultClientNotSet when SetDefaultClient has not been called
 // or when the default client has been cleared.
 func GetDefaultClient() (*Client, error) {
+	defaultClientMu.RLock()
+	defer defaultClientMu.RUnlock()
 	if defaultClient == nil {
 		return nil, ErrDefaultClientNotSet
 	}

@@ -88,6 +88,10 @@ func (c *Client) SubmitJobExecutionCode(ctx context.Context, req SubmitJobExecut
 
 // GetJobExecutionJob returns details for a SAS Viya Job Execution job.
 func (c *Client) GetJobExecutionJob(ctx context.Context, jobID string) (resp JobExecutionJob, err error) {
+	if jobID == "" {
+		return resp, &ErrInvalidParameter{Parameter: "jobID", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetJobExecutionJob")
 	defer span.End()
 
@@ -128,6 +132,10 @@ func (c *Client) GetJobExecutionJobs(ctx context.Context, opts ListOptions) (res
 
 // CancelJobExecutionJob cancels a Job Execution job.
 func (c *Client) CancelJobExecutionJob(ctx context.Context, jobID string) (err error) {
+	if jobID == "" {
+		return &ErrInvalidParameter{Parameter: "jobID", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "CancelJobExecutionJob")
 	defer span.End()
 
@@ -148,6 +156,10 @@ func (c *Client) CancelJobExecutionJob(ctx context.Context, jobID string) (err e
 
 // GetJobExecutionJobLog retrieves the log text for a Job Execution job when available.
 func (c *Client) GetJobExecutionJobLog(ctx context.Context, jobID string) (string, error) {
+	if jobID == "" {
+		return "", &ErrInvalidParameter{Parameter: "jobID", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetJobExecutionJobLog")
 	defer span.End()
 

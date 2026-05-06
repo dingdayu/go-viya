@@ -52,6 +52,10 @@ func (c *Client) GetBatchFileSetsList(ctx context.Context) (resp BatchFileSetsRe
 
 // GetBatchFileSetsInfo returns metadata for a single SAS Viya Batch file set.
 func (c *Client) GetBatchFileSetsInfo(ctx context.Context, id string) (resp BatchFileSet, err error) {
+	if id == "" {
+		return resp, &ErrInvalidParameter{Parameter: "id", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetBatchFileSetsInfo")
 	defer span.End()
 
@@ -74,6 +78,10 @@ func (c *Client) GetBatchFileSetsInfo(ctx context.Context, id string) (resp Batc
 
 // CreateBatchFileSet creates a SAS Viya Batch file set for the supplied context ID.
 func (c *Client) CreateBatchFileSet(ctx context.Context, contextId string) (resp BatchFileSet, err error) {
+	if contextId == "" {
+		return resp, &ErrInvalidParameter{Parameter: "contextId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "CreateBatchFileSet")
 	defer span.End()
 
@@ -103,6 +111,10 @@ func (c *Client) CreateBatchFileSet(ctx context.Context, contextId string) (resp
 // SAS Viya can reject deletion with HTTP 409 when the file set is still referenced
 // by another resource, such as a job.
 func (c *Client) DeleteBatchFileSet(ctx context.Context, fileSetId string) (err error) {
+	if fileSetId == "" {
+		return &ErrInvalidParameter{Parameter: "fileSetId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "DeleteBatchFileSet")
 	defer span.End()
 
