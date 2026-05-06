@@ -13,8 +13,9 @@ import (
 type Option func(*clientOptions)
 
 type clientOptions struct {
-	rt            http.RoundTripper
-	tokenProvider TokenProvider
+	rt              http.RoundTripper
+	tokenProvider   TokenProvider
+	authMiddleware  resty.RequestMiddleware
 }
 
 // WithRoundTripper configures the HTTP transport used by the underlying Resty client.
@@ -25,11 +26,12 @@ func WithRoundTripper(rt http.RoundTripper) Option {
 	}
 }
 
-// WithTokenProvider configures a provider that supplies bearer tokens for each request.
-// Token lookup happens lazily in request middleware so callers' contexts can cancel token fetches.
-func WithTokenProvider(provider TokenProvider) Option {
+// WithAuthMiddleware injects a custom authentication middleware for outgoing requests.
+// If set, this middleware is used instead of the default token-provider middleware.
+// The middleware should set the Authorization header or other auth details on the request.
+func WithAuthMiddleware(mw resty.RequestMiddleware) Option {
 	return func(o *clientOptions) {
-		o.tokenProvider = provider
+		o.authMiddleware = mw
 	}
 }
 
@@ -58,8 +60,9 @@ func NewClient(ctx context.Context, baseURL string, opts ...Option) *Client {
 	}
 
 	cfg := &clientOptions{
-		rt:            nil,
-		tokenProvider: nil,
+		rt:             nil,
+		tokenProvider:  nil,
+		authMiddleware: nil,
 	}
 	for _, opt := range opts {
 		if opt != nil {
@@ -78,11 +81,11 @@ func NewClient(ctx context.Context, baseURL string, opts ...Option) *Client {
 		tokenProvider: cfg.tokenProvider,
 	}
 
-	if cfg.tokenProvider != nil {
+	if cfg.authMiddleware != nil {
+		client.AddRequestMiddleware(cfg.authMiddleware)
+	} else if cfg.tokenProvider != nil {
 		provider := cfg.tokenProvider
-
-		// Fetch token lazily per request; resty propagates provider errors to callers.
-		result.client.AddRequestMiddleware(func(_ *resty.Client, r *resty.Request) error {
+		client.AddRequestMiddleware(func(_ *resty.Client, r *resty.Request) error {
 			token, err := provider.Token(r.Context())
 			if err != nil {
 				return err
