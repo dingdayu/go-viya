@@ -56,6 +56,10 @@ func (c *Client) GetBatchServersList(ctx context.Context) (resp BatchServersResp
 
 // GetBatchServerInfo returns details for a reusable SAS Viya Batch server.
 func (c *Client) GetBatchServerInfo(ctx context.Context, serverId string) (resp BatchServer, err error) {
+	if serverId == "" {
+		return resp, &ErrInvalidParameter{Parameter: "serverId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetBatchServerInfo")
 	defer span.End()
 
@@ -78,6 +82,10 @@ func (c *Client) GetBatchServerInfo(ctx context.Context, serverId string) (resp 
 
 // DeleteBatchServer deletes a reusable SAS Viya Batch server.
 func (c *Client) DeleteBatchServer(ctx context.Context, serverId string) (err error) {
+	if serverId == "" {
+		return &ErrInvalidParameter{Parameter: "serverId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "DeleteBatchServer")
 	defer span.End()
 

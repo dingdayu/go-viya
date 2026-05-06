@@ -29,6 +29,10 @@ type BatchFileResponse = ListResponse[BatchFile]
 
 // GetBatchFile returns files in a SAS Viya Batch file set.
 func (c *Client) GetBatchFile(ctx context.Context, fileSetId string) (resp BatchFileResponse, err error) {
+	if fileSetId == "" {
+		return resp, &ErrInvalidParameter{Parameter: "fileSetId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetBatchFileSetFiles")
 	defer span.End()
 
@@ -51,6 +55,10 @@ func (c *Client) GetBatchFile(ctx context.Context, fileSetId string) (resp Batch
 
 // GetBatchFileInfo returns metadata for one file in a SAS Viya Batch file set.
 func (c *Client) GetBatchFileInfo(ctx context.Context, fileSetId string, fileName string) (resp BatchFile, err error) {
+	if fileSetId == "" {
+		return resp, &ErrInvalidParameter{Parameter: "fileSetId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetBatchFileInfo")
 	defer span.End()
 
@@ -73,6 +81,10 @@ func (c *Client) GetBatchFileInfo(ctx context.Context, fileSetId string, fileNam
 
 // DownloadBatchFile downloads a file from a SAS Viya Batch file set.
 func (c *Client) DownloadBatchFile(ctx context.Context, fileSetId string, fileName string) (content []byte, err error) {
+	if fileSetId == "" {
+		return nil, &ErrInvalidParameter{Parameter: "fileSetId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "DownloadBatchFile")
 	defer span.End()
 
@@ -101,6 +113,10 @@ func (c *Client) DownloadBatchFile(ctx context.Context, fileSetId string, fileNa
 
 // UploadBatchFile uploads or replaces a file in a SAS Viya Batch file set.
 func (c *Client) UploadBatchFile(ctx context.Context, fileSetId string, fileName string, content []byte) (err error) {
+	if fileSetId == "" {
+		return &ErrInvalidParameter{Parameter: "fileSetId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "UploadBatchFile")
 	defer span.End()
 
@@ -116,6 +132,10 @@ func (c *Client) UploadBatchFile(ctx context.Context, fileSetId string, fileName
 // UploadBatchFileFromReader uploads or replaces a file in a SAS Viya Batch file set
 // from content read from r.
 func (c *Client) UploadBatchFileFromReader(ctx context.Context, fileSetId string, fileName string, r io.Reader) (err error) {
+	if fileSetId == "" {
+		return &ErrInvalidParameter{Parameter: "fileSetId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "UploadBatchFileFromReader")
 	defer span.End()
 
@@ -129,6 +149,10 @@ func (c *Client) UploadBatchFileFromReader(ctx context.Context, fileSetId string
 }
 
 func (c *Client) uploadBatchFileFromReader(ctx context.Context, fileSetId string, fileName string, r io.Reader) (err error) {
+	if fileSetId == "" {
+		return &ErrInvalidParameter{Parameter: "fileSetId", Reason: "must not be empty"}
+	}
+
 	contextAccept := "application/vnd.sas.error+json"
 	resp, err := c.client.R().
 		SetContext(ctx).

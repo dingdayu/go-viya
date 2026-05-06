@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 
-	"resty.dev/v3"
+	resty "resty.dev/v3"
 )
 
 // Option configures a Client.
@@ -48,8 +49,13 @@ type Client struct {
 // The baseURL should be the root of a SAS Viya deployment, without a trailing service path.
 // See the SAS Viya REST API usage notes:
 // https://developer.sas.com/docs/rest-apis/getting-started/authentication
+//
+// The ctx parameter is reserved for future context-aware initialization.
+// Callers may pass context.Background() if no specific context is needed.
 func NewClient(ctx context.Context, baseURL string, opts ...Option) *Client {
-	_ = ctx
+	if _, err := url.Parse(baseURL); err != nil {
+		panic(fmt.Sprintf("invalid baseURL %q: %v", baseURL, err))
+	}
 
 	cfg := &clientOptions{
 		rt:            nil,

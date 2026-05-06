@@ -60,6 +60,10 @@ func (c *Client) GetBatchJobsList(ctx context.Context) (resp BatchJobsResponse, 
 
 // GetBatchJobInfo returns details for a SAS Viya Batch job.
 func (c *Client) GetBatchJobInfo(ctx context.Context, jobId string) (resp BatchJob, err error) {
+	if jobId == "" {
+		return resp, &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetBatchJobInfo")
 	defer span.End()
 
@@ -130,6 +134,10 @@ func (c *Client) CreateBatchJob(ctx context.Context, req SubmitBatchJobRequest) 
 
 // DeleteBatchJob deletes a SAS Viya Batch job.
 func (c *Client) DeleteBatchJob(ctx context.Context, jobId string) (err error) {
+	if jobId == "" {
+		return &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "DeleteBatchJob")
 	defer span.End()
 
@@ -155,6 +163,10 @@ type BatchJobInputRequest struct {
 
 // SendBatchJobInput sends STDIN text lines to a running SAS Viya Batch job.
 func (c *Client) SendBatchJobInput(ctx context.Context, jobId string, input []string) (err error) {
+	if jobId == "" {
+		return &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "SendBatchJobInput")
 	defer span.End()
 
@@ -188,6 +200,10 @@ type BatchJobOutput struct {
 
 // GetBatchJobOutput retrieves STDOUT and STDERR text from a running SAS Viya Batch job.
 func (c *Client) GetBatchJobOutput(ctx context.Context, jobId string) (resp BatchJobOutput, err error) {
+	if jobId == "" {
+		return resp, &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetBatchJobOutput")
 	defer span.End()
 
@@ -210,6 +226,10 @@ func (c *Client) GetBatchJobOutput(ctx context.Context, jobId string) (resp Batc
 
 // GetBatchJobState returns the plain-text state for a SAS Viya Batch job.
 func (c *Client) GetBatchJobState(ctx context.Context, jobId string) (state string, err error) {
+	if jobId == "" {
+		return "", &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetBatchJobState")
 	defer span.End()
 
@@ -230,6 +250,10 @@ func (c *Client) GetBatchJobState(ctx context.Context, jobId string) (state stri
 
 // CancelBatchJob requests cancellation of a SAS Viya Batch job.
 func (c *Client) CancelBatchJob(ctx context.Context, jobId string) (err error) {
+	if jobId == "" {
+		return &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "CancelBatchJob")
 	defer span.End()
 
@@ -255,6 +279,10 @@ func (c *Client) CancelBatchJob(ctx context.Context, jobId string) (err error) {
 // The wait stops early when ctx is canceled or GetBatchJobInfo returns an error.
 // In that case, the returned BatchJob contains the most recent job details, if any.
 func (c *Client) WaitBatchJobCompleted(ctx context.Context, jobId string, interval time.Duration) (jobInfo BatchJob, err error) {
+	if jobId == "" {
+		return jobInfo, &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "WaitBatchJobCompleted")
 	defer span.End()
 

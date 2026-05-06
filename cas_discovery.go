@@ -98,6 +98,10 @@ func (c *Client) GetCASServers(ctx context.Context, opts ListOptions) (resp CASS
 
 // GetCASLibs returns CAS libraries for a CAS server.
 func (c *Client) GetCASLibs(ctx context.Context, serverID string, opts ListOptions) (resp CASLibsResponse, err error) {
+	if serverID == "" {
+		return resp, &ErrInvalidParameter{Parameter: "serverID", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetCASLibs")
 	defer span.End()
 
@@ -117,6 +121,13 @@ func (c *Client) GetCASLibs(ctx context.Context, serverID string, opts ListOptio
 
 // GetCASTables returns tables in a CAS library.
 func (c *Client) GetCASTables(ctx context.Context, serverID string, caslibName string, opts ListOptions) (resp CASTablesResponse, err error) {
+	if serverID == "" {
+		return resp, &ErrInvalidParameter{Parameter: "serverID", Reason: "must not be empty"}
+	}
+	if caslibName == "" {
+		return resp, &ErrInvalidParameter{Parameter: "caslibName", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetCASTables")
 	defer span.End()
 
@@ -136,6 +147,16 @@ func (c *Client) GetCASTables(ctx context.Context, serverID string, caslibName s
 
 // GetCASTableInfo returns metadata for a CAS table.
 func (c *Client) GetCASTableInfo(ctx context.Context, serverID string, caslibName string, tableName string) (resp CASTable, err error) {
+	if serverID == "" {
+		return resp, &ErrInvalidParameter{Parameter: "serverID", Reason: "must not be empty"}
+	}
+	if caslibName == "" {
+		return resp, &ErrInvalidParameter{Parameter: "caslibName", Reason: "must not be empty"}
+	}
+	if tableName == "" {
+		return resp, &ErrInvalidParameter{Parameter: "tableName", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetCASTableInfo")
 	defer span.End()
 
@@ -157,6 +178,16 @@ func (c *Client) GetCASTableInfo(ctx context.Context, serverID string, caslibNam
 
 // GetCASTableColumns returns column metadata for a CAS table.
 func (c *Client) GetCASTableColumns(ctx context.Context, serverID string, caslibName string, tableName string, opts ListOptions) (resp CASTableColumnsResponse, err error) {
+	if serverID == "" {
+		return resp, &ErrInvalidParameter{Parameter: "serverID", Reason: "must not be empty"}
+	}
+	if caslibName == "" {
+		return resp, &ErrInvalidParameter{Parameter: "caslibName", Reason: "must not be empty"}
+	}
+	if tableName == "" {
+		return resp, &ErrInvalidParameter{Parameter: "tableName", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetCASTableColumns")
 	defer span.End()
 
@@ -176,6 +207,16 @@ func (c *Client) GetCASTableColumns(ctx context.Context, serverID string, caslib
 
 // GetCASTableRows returns sample rows from a CAS table using dataTables and rowSets.
 func (c *Client) GetCASTableRows(ctx context.Context, serverID string, caslibName string, tableName string, opts ListOptions) (resp CASTableRowsResponse, err error) {
+	if serverID == "" {
+		return resp, &ErrInvalidParameter{Parameter: "serverID", Reason: "must not be empty"}
+	}
+	if caslibName == "" {
+		return resp, &ErrInvalidParameter{Parameter: "caslibName", Reason: "must not be empty"}
+	}
+	if tableName == "" {
+		return resp, &ErrInvalidParameter{Parameter: "tableName", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetCASTableRows")
 	defer span.End()
 
@@ -228,6 +269,16 @@ func (c *Client) GetCASTableRows(ctx context.Context, serverID string, caslibNam
 
 // GetCASTableDataColumns returns column metadata from the dataTables API.
 func (c *Client) GetCASTableDataColumns(ctx context.Context, serverID string, caslibName string, tableName string, opts ListOptions) (resp CASTableColumnsResponse, err error) {
+	if serverID == "" {
+		return resp, &ErrInvalidParameter{Parameter: "serverID", Reason: "must not be empty"}
+	}
+	if caslibName == "" {
+		return resp, &ErrInvalidParameter{Parameter: "caslibName", Reason: "must not be empty"}
+	}
+	if tableName == "" {
+		return resp, &ErrInvalidParameter{Parameter: "tableName", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetCASTableDataColumns")
 	defer span.End()
 

@@ -43,6 +43,10 @@ type CreateComputeJobRequest struct {
 
 // CreateComputeJob executes SAS code asynchronously in a SAS Viya Compute session.
 func (c *Client) CreateComputeJob(ctx context.Context, sessionId string, req CreateComputeJobRequest) (resp ComputeJob, err error) {
+	if sessionId == "" {
+		return resp, &ErrInvalidParameter{Parameter: "sessionId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "CreateComputeJob")
 	defer span.End()
 
@@ -67,6 +71,10 @@ func (c *Client) CreateComputeJob(ctx context.Context, sessionId string, req Cre
 
 // GetComputeJobsList returns current jobs for a SAS Viya Compute session.
 func (c *Client) GetComputeJobsList(ctx context.Context, sessionId string) (resp ComputeJobsResponse, err error) {
+	if sessionId == "" {
+		return resp, &ErrInvalidParameter{Parameter: "sessionId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetComputeJobsList")
 	defer span.End()
 
@@ -89,6 +97,13 @@ func (c *Client) GetComputeJobsList(ctx context.Context, sessionId string) (resp
 
 // GetComputeJobInfo returns information about a SAS Viya Compute job.
 func (c *Client) GetComputeJobInfo(ctx context.Context, sessionId string, jobId string) (resp ComputeJob, err error) {
+	if sessionId == "" {
+		return resp, &ErrInvalidParameter{Parameter: "sessionId", Reason: "must not be empty"}
+	}
+	if jobId == "" {
+		return resp, &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetComputeJobInfo")
 	defer span.End()
 
@@ -111,6 +126,13 @@ func (c *Client) GetComputeJobInfo(ctx context.Context, sessionId string, jobId 
 
 // DeleteComputeJob deletes a SAS Viya Compute job and its session access points.
 func (c *Client) DeleteComputeJob(ctx context.Context, sessionId string, jobId string) (err error) {
+	if sessionId == "" {
+		return &ErrInvalidParameter{Parameter: "sessionId", Reason: "must not be empty"}
+	}
+	if jobId == "" {
+		return &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "DeleteComputeJob")
 	defer span.End()
 
@@ -131,6 +153,13 @@ func (c *Client) DeleteComputeJob(ctx context.Context, sessionId string, jobId s
 
 // GetComputeJobState returns the plain-text state for a SAS Viya Compute job.
 func (c *Client) GetComputeJobState(ctx context.Context, sessionId string, jobId string) (state string, err error) {
+	if sessionId == "" {
+		return "", &ErrInvalidParameter{Parameter: "sessionId", Reason: "must not be empty"}
+	}
+	if jobId == "" {
+		return "", &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "GetComputeJobState")
 	defer span.End()
 
@@ -153,6 +182,13 @@ func (c *Client) GetComputeJobState(ctx context.Context, sessionId string, jobId
 //
 // SAS Viya requires the current ETag in ifMatch for this operation.
 func (c *Client) SetComputeJobState(ctx context.Context, sessionId string, jobId string, state string, ifMatch string) (newState string, err error) {
+	if sessionId == "" {
+		return "", &ErrInvalidParameter{Parameter: "sessionId", Reason: "must not be empty"}
+	}
+	if jobId == "" {
+		return "", &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+	}
+
 	ctx, span := tracer.Start(ctx, "SetComputeJobState")
 	defer span.End()
 
@@ -178,5 +214,12 @@ func (c *Client) SetComputeJobState(ctx context.Context, sessionId string, jobId
 
 // CancelComputeJob requests cancellation of a SAS Viya Compute job.
 func (c *Client) CancelComputeJob(ctx context.Context, sessionId string, jobId string, ifMatch string) (state string, err error) {
+	if sessionId == "" {
+		return "", &ErrInvalidParameter{Parameter: "sessionId", Reason: "must not be empty"}
+	}
+	if jobId == "" {
+		return "", &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+	}
+
 	return c.SetComputeJobState(ctx, sessionId, jobId, "canceled", ifMatch)
 }
