@@ -13,9 +13,9 @@ import (
 type Option func(*clientOptions)
 
 type clientOptions struct {
-	rt              http.RoundTripper
-	tokenProvider   TokenProvider
-	authMiddleware  resty.RequestMiddleware
+	rt             http.RoundTripper
+	tokenProvider  TokenProvider
+	authMiddleware resty.RequestMiddleware
 }
 
 // WithRoundTripper configures the HTTP transport used by the underlying Resty client.
@@ -32,6 +32,14 @@ func WithRoundTripper(rt http.RoundTripper) Option {
 func WithAuthMiddleware(mw resty.RequestMiddleware) Option {
 	return func(o *clientOptions) {
 		o.authMiddleware = mw
+	}
+}
+
+// WithTokenProvider configures a provider that supplies bearer tokens for each request.
+// Token lookup happens lazily in request middleware so callers' contexts can cancel token fetches.
+func WithTokenProvider(provider TokenProvider) Option {
+	return func(o *clientOptions) {
+		o.tokenProvider = provider
 	}
 }
 
