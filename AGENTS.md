@@ -72,6 +72,41 @@ Format user-facing changes for GitHub Releases using these categories:
 - Deprecated: API that remains available but should be avoided.
 - Removed: breaking changes, only for major versions.
 
+## Commit Message Rules (Release-Please Compatible)
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) with [release-please](https://github.com/googleapis/release-please) to automate versioning and CHANGELOG generation.
+
+**Commit Message Format:**
+```
+<type>(<scope>): <subject>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+**Supported Types:**
+- `feat:` - New feature → **minor version bump** (v0.1.0 → v0.2.0)
+- `fix:` - Bug fix → **patch version bump** (v0.1.0 → v0.1.1)
+- `refactor:` - Code refactoring (no behavior change) → patch version
+- `docs:` - Documentation only → patch version
+- `test:` - Test changes only → no version bump
+- `chore:` - Tooling/maintenance → no version bump
+
+**Breaking Changes (Major Version Bump):**
+- Option 1: Use `!` after type: `feat!: rename PatchIdentitiesLDAPGroup to PatchIdentitiesLDAPUser`
+- Option 2: Add footer: `BREAKING CHANGE: <description>`
+- Both trigger **major version bump** (v0.2.0 → v1.0.0)
+
+**Examples:**
+```
+fix: add missing input validation for URLs and IDs
+feat: add CAS table upload support
+feat!: rename PatchIdentitiesLDAPGroup to PatchIdentitiesLDAPUser
+
+BREAKING CHANGE: Rename PatchIdentitiesLDAPGroup to PatchIdentitiesLDAPUser
+```
+
 ## Compatibility
 
 This is a public Go module. After the first public tag exists, run the compatibility check before tagging a release:
