@@ -2,15 +2,33 @@ version: "2"
 
 run:
   timeout: 5m
-  skip-dirs:
-    - examples
-
-formatters:
-  enable:
-    - gofmt
-    - goimports
 
 linters:
+  exclusions:
+    paths:
+      - examples
+    rules:
+      - linters:
+          - errcheck
+        text: "Error return value of `.*` is not checked"
+      - linters:
+          - errorlint
+        text: "non-wrapping format verb for fmt.Errorf"
+      - linters:
+          - revive
+        text: "var-naming: method parameter"
+      - linters:
+          - revive
+        text: "var-naming: struct field"
+      - linters:
+          - revive
+        text: "unused-parameter: parameter"
+      - linters:
+          - revive
+        text: "exported: type name will be used"
+      - linters:
+          - revive
+        text: "package-comments: should have a package comment"
   enable:
     - errcheck
     - govet
@@ -26,3 +44,8 @@ linters:
     - intrange
     - sloglint
     - revive
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
