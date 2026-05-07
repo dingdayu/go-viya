@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sync"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -48,7 +49,7 @@ type TokenProvider interface {
 }
 
 type tokenProviderOptions struct {
-	baseURL      string
+	baseURL      *url.URL
 	clientID     string
 	clientSecret string
 }
@@ -83,7 +84,7 @@ func WithOAuthClientProvider(provider *ClientCredentialsTokenProvider) TokenProv
 //
 // It is also used as the shared credential holder by Password/AuthCode providers.
 type ClientCredentialsTokenProvider struct {
-	baseURL      string
+	baseURL      *url.URL
 	clientID     string
 	clientSecret string
 	httpClient   *http.Client
@@ -93,7 +94,7 @@ type ClientCredentialsTokenProvider struct {
 }
 
 func (p *ClientCredentialsTokenProvider) tokenURL() string {
-	return p.baseURL + "/SASLogon/oauth/token"
+	return p.baseURL.String() + "/SASLogon/oauth/token"
 }
 
 func newTokenHTTPClient(capture bool) *http.Client {
@@ -239,8 +240,8 @@ func newCredentialBase(options tokenProviderOptions, requireSecret bool) (*Clien
 	clientID := options.clientID
 	clientSecret := options.clientSecret
 
-	if baseURL == "" {
-		return nil, &ErrInvalidParameter{Parameter: "baseURL", Reason: "must not be empty"}
+	if baseURL == nil {
+		return nil, &ErrInvalidParameter{Parameter: "baseURL", Reason: "must not be nil"}
 	}
 	if clientID == "" {
 		clientID = defaultClientID
@@ -257,7 +258,27 @@ func newCredentialBase(options tokenProviderOptions, requireSecret bool) (*Clien
 	}, nil
 }
 
-func providerOptions(baseURL string, opts ...TokenProviderOption) tokenProviderOptions {
+func providerOptions(opts ...TokenProviderOption) tokenProviderOptions {
+	options := tokenProviderOptions{
+		clientID: defaultClientID,
+	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(&options)
+		}
+	}
+	return options
+}
+
+// NewPasswordTokenProvider creates a token provider that authenticates with username and password.
+func NewPasswordTokenProvider(username, password string, baseURL *url.URL, opts ...TokenProviderOption) (TokenProvider, error) {
+	if username == "" {
+		return nil, &ErrInvalidParameter{Parameter: "username", Reason: "must not be empty"}
+	}
+	if password == "" {
+		return nil, &ErrInvalidParameter{Parameter: "password", Reason: "must not be empty"}
+	}
+
 	options := tokenProviderOptions{
 		baseURL:  baseURL,
 		clientID: defaultClientID,
@@ -267,28 +288,6 @@ func providerOptions(baseURL string, opts ...TokenProviderOption) tokenProviderO
 			opt(&options)
 		}
 	}
-	if options.baseURL == "" {
-		options.baseURL = baseURL
-	}
-	if options.clientID == "" {
-		options.clientID = defaultClientID
-	}
-	return options
-}
-
-// NewPasswordTokenProvider creates a token provider that authenticates with username and password.
-//
-// baseURL must be the SAS Viya deployment root. Use WithOAuthClient to override
-// the default OAuth client ID or provide a client secret.
-func NewPasswordTokenProvider(baseURL, username, password string, opts ...TokenProviderOption) (TokenProvider, error) {
-	if username == "" {
-		return nil, &ErrInvalidParameter{Parameter: "username", Reason: "must not be empty"}
-	}
-	if password == "" {
-		return nil, &ErrInvalidParameter{Parameter: "password", Reason: "must not be empty"}
-	}
-
-	options := providerOptions(baseURL, opts...)
 	base, err := newCredentialBase(options, false)
 	if err != nil {
 		return nil, err
@@ -302,15 +301,29 @@ func NewPasswordTokenProvider(baseURL, username, password string, opts ...TokenP
 }
 
 // NewAuthCodeTokenProvider creates a token provider that exchanges an OAuth2 authorization code.
-//
-// baseURL must be the SAS Viya deployment root. Use WithOAuthClient to pass the
-// OAuth client registration that issued the code.
-func NewAuthCodeTokenProvider(baseURL, code string, opts ...TokenProviderOption) (TokenProvider, error) {
+func NewAuthCodeTokenProvider(code string, baseURL *url.URL, opts ...TokenProviderOption) (TokenProvider, error) {
 	if code == "" {
 		return nil, &ErrInvalidParameter{Parameter: "code", Reason: "must not be empty"}
 	}
+	if baseURL == nil {
+		return nil, &ErrInvalidParameter{Parameter: "baseURL", Reason: "must not be nil"}
+	}
 
-	options := providerOptions(baseURL, opts...)
+	options := tokenProviderOptions{
+		baseURL:  baseURL,
+		clientID: defaultClientID,
+	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(&options)
+		}
+	}
+
+	// Placeholder allows auth-code flow to proceed without required secret validation
+	if options.clientSecret == "" {
+		options.clientSecret = "placeholder-for-auth-code"
+	}
+
 	base, err := newCredentialBase(options, false)
 	if err != nil {
 		return nil, err
@@ -323,15 +336,13 @@ func NewAuthCodeTokenProvider(baseURL, code string, opts ...TokenProviderOption)
 }
 
 // NewClientCredentialsTokenProvider creates a token provider for service-to-service authentication.
-//
-// baseURL must be the SAS Viya deployment root. clientID and clientSecret must
-// identify a SAS Logon OAuth client that is allowed to use client credentials.
-func NewClientCredentialsTokenProvider(baseURL, clientID, clientSecret string) (*ClientCredentialsTokenProvider, error) {
-	base, err := newCredentialBase(tokenProviderOptions{
+func NewClientCredentialsTokenProvider(clientID, clientSecret string, baseURL *url.URL) (*ClientCredentialsTokenProvider, error) {
+	options := tokenProviderOptions{
 		baseURL:      baseURL,
 		clientID:     clientID,
 		clientSecret: clientSecret,
-	}, true)
+	}
+	base, err := newCredentialBase(options, true)
 	if err != nil {
 		return nil, err
 	}

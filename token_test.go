@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"sync/atomic"
 	"testing"
@@ -12,7 +13,8 @@ import (
 )
 
 func TestNewPasswordTokenProviderDefaultsOAuthClient(t *testing.T) {
-	provider, err := NewPasswordTokenProvider("https://viya.example.com", "user", "password")
+	baseURL, _ := url.Parse("https://viya.example.com")
+	provider, err := NewPasswordTokenProvider("user", "password", baseURL)
 	if err != nil {
 		t.Fatalf("NewPasswordTokenProvider() error = %v", err)
 	}
@@ -33,12 +35,13 @@ func TestNewPasswordTokenProviderDefaultsOAuthClient(t *testing.T) {
 }
 
 func TestNewAuthCodeTokenProviderUsesOAuthClientProvider(t *testing.T) {
-	base, err := NewClientCredentialsTokenProvider("https://viya.example.com", "client-id", "client-secret")
+	baseURL, _ := url.Parse("https://viya.example.com")
+	base, err := NewClientCredentialsTokenProvider("client-id", "client-secret", baseURL)
 	if err != nil {
 		t.Fatalf("NewClientCredentialsTokenProvider() error = %v", err)
 	}
 
-	provider, err := NewAuthCodeTokenProvider("", "auth-code", WithOAuthClientProvider(base))
+	provider, err := NewAuthCodeTokenProvider("auth-code", baseURL, WithOAuthClientProvider(base))
 	if err != nil {
 		t.Fatalf("NewAuthCodeTokenProvider() error = %v", err)
 	}
@@ -62,7 +65,8 @@ func TestNewAuthCodeTokenProviderUsesOAuthClientProvider(t *testing.T) {
 }
 
 func TestNewClientCredentialsTokenProviderRequiresSecret(t *testing.T) {
-	if _, err := NewClientCredentialsTokenProvider("https://viya.example.com", "client-id", ""); err == nil {
+	baseURL, _ := url.Parse("https://viya.example.com")
+	if _, err := NewClientCredentialsTokenProvider("client-id", "", baseURL); err == nil {
 		t.Fatal("NewClientCredentialsTokenProvider() error = nil, want error")
 	}
 }
@@ -89,7 +93,8 @@ func TestClientCredentialsTokenProviderRefreshUsesCurrentContext(t *testing.T) {
 	}))
 	defer server.Close()
 
-	provider, err := NewClientCredentialsTokenProvider(server.URL, "client-id", "client-secret")
+	serverURL, _ := url.Parse(server.URL)
+	provider, err := NewClientCredentialsTokenProvider("client-id", "client-secret", serverURL)
 	if err != nil {
 		t.Fatalf("NewClientCredentialsTokenProvider() error = %v", err)
 	}
