@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"net/url"
 	"os"
 
 	"github.com/dingdayu/go-viya"
@@ -16,16 +17,16 @@ func main() {
 	clientSecret := mustEnv("VIYA_CLIENT_SECRET")
 	definitionName := envDefault("VIYA_CONFIGURATION_DEFINITION", "sas.identities.providers.ldap.user")
 
-	tokens, err := viya.NewClientCredentialsTokenProvider(baseURL, clientID, clientSecret)
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	tokens, err := viya.NewClientCredentialsTokenProvider(clientID, clientSecret, u)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	baseURLOpt, err := viya.ParseURL(baseURL)
-	if err != nil {
-		log.Fatal(err)
-	}
-	client := viya.NewClient(ctx, baseURLOpt, viya.WithTokenProvider(tokens))
+	client := viya.NewClient(ctx, viya.WithBaseURL(u), viya.WithTokenProvider(tokens))
 
 	body, err := client.GetConfiguration(ctx, definitionName)
 	if err != nil {

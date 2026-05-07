@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -103,11 +104,15 @@ func (c cliConfig) tokenProvider() (viya.TokenProvider, error) {
 	if c.AccessToken != "" {
 		return staticTokenProvider(c.AccessToken), nil
 	}
+	baseURL, err := url.Parse(c.BaseURL)
+	if err != nil {
+		return nil, err
+	}
 	if c.ClientSecret != "" && c.Username == "" && c.Password == "" {
-		return viya.NewClientCredentialsTokenProvider(c.BaseURL, c.ClientID, c.ClientSecret)
+		return viya.NewClientCredentialsTokenProvider(c.ClientID, c.ClientSecret, baseURL)
 	}
 	if c.Username != "" && c.Password != "" {
-		return viya.NewPasswordTokenProvider(c.BaseURL, c.Username, c.Password, viya.WithOAuthClient(c.ClientID, c.ClientSecret))
+		return viya.NewPasswordTokenProvider(c.Username, c.Password, baseURL, viya.WithOAuthClient(c.ClientID, c.ClientSecret))
 	}
 	return nil, fmt.Errorf("credentials are required; provide access token, client credentials, or username/password")
 }

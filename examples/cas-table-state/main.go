@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"net/url"
 	"os"
 
 	"github.com/dingdayu/go-viya"
@@ -11,7 +12,7 @@ import (
 func main() {
 	ctx := context.Background()
 
-	baseURL := mustEnv("VIYA_BASE_URL")
+	baseURLStr := mustEnv("VIYA_BASE_URL")
 	clientID := mustEnv("VIYA_CLIENT_ID")
 	clientSecret := mustEnv("VIYA_CLIENT_SECRET")
 	serverID := mustEnv("VIYA_CAS_SERVER")
@@ -19,16 +20,17 @@ func main() {
 	table := mustEnv("VIYA_CASTABLE")
 	scope := envDefault("VIYA_CAS_SCOPE", "global")
 
-	tokens, err := viya.NewClientCredentialsTokenProvider(baseURL, clientID, clientSecret)
+	baseURL, err := url.Parse(baseURLStr)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	baseURLOpt, err := viya.ParseURL(baseURL)
+	tokens, err := viya.NewClientCredentialsTokenProvider(clientID, clientSecret, baseURL)
 	if err != nil {
 		log.Fatal(err)
 	}
-	client := viya.NewClient(ctx, baseURLOpt, viya.WithTokenProvider(tokens))
+
+	client := viya.NewClient(ctx, viya.WithBaseURL(baseURL), viya.WithTokenProvider(tokens))
 
 	if err := client.LoadCASTableToMemory(ctx, serverID, caslib, table, true, scope); err != nil {
 		log.Fatal(err)

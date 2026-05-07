@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"net/url"
 	"os"
 
 	"github.com/dingdayu/go-viya"
@@ -11,27 +12,23 @@ import (
 func main() {
 	ctx := context.Background()
 
-	baseURL := mustEnv("VIYA_BASE_URL")
+	baseURLStr := mustEnv("VIYA_BASE_URL")
 	username := mustEnv("VIYA_USERNAME")
 	password := mustEnv("VIYA_PASSWORD")
 	clientID := os.Getenv("VIYA_CLIENT_ID")
 	clientSecret := os.Getenv("VIYA_CLIENT_SECRET")
 
-	provider, err := viya.NewPasswordTokenProvider(
-		baseURL,
-		username,
-		password,
-		viya.WithOAuthClient(clientID, clientSecret),
-	)
+	baseURL, err := url.Parse(baseURLStr)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	baseURLOpt, err := viya.ParseURL(baseURL)
+	provider, err := viya.NewPasswordTokenProvider(username, password, baseURL, viya.WithOAuthClient(clientID, clientSecret))
 	if err != nil {
 		log.Fatal(err)
 	}
-	client := viya.NewClient(ctx, baseURLOpt, viya.WithTokenProvider(provider))
+
+	client := viya.NewClient(ctx, viya.WithBaseURL(baseURL), viya.WithTokenProvider(provider))
 
 	users, err := client.GetIdentitiesUsers(ctx)
 	if err != nil {

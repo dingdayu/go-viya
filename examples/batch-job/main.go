@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"net/url"
 	"os"
 	"time"
 
@@ -13,21 +14,22 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	baseURL := mustEnv("VIYA_BASE_URL")
+	baseURLStr := mustEnv("VIYA_BASE_URL")
 	clientID := mustEnv("VIYA_CLIENT_ID")
 	clientSecret := mustEnv("VIYA_CLIENT_SECRET")
 	batchContextID := mustEnv("VIYA_BATCH_CONTEXT_ID")
 
-	tokens, err := viya.NewClientCredentialsTokenProvider(baseURL, clientID, clientSecret)
+	baseURL, err := url.Parse(baseURLStr)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	baseURLOpt, err := viya.ParseURL(baseURL)
+	tokens, err := viya.NewClientCredentialsTokenProvider(clientID, clientSecret, baseURL)
 	if err != nil {
 		log.Fatal(err)
 	}
-	client := viya.NewClient(ctx, baseURLOpt, viya.WithTokenProvider(tokens))
+
+	client := viya.NewClient(ctx, viya.WithBaseURL(baseURL), viya.WithTokenProvider(tokens))
 
 	fileSet, err := client.CreateBatchFileSet(ctx, batchContextID)
 	if err != nil {
