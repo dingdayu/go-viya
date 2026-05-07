@@ -9,13 +9,24 @@ import (
 	resty "resty.dev/v3"
 )
 
+// ParseURL creates a Client option from the given SAS Viya base URL.
+// The base URL should be the root of a SAS Viya deployment, without a trailing service path.
+func ParseURL(baseURL string) (Option, error) {
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, err
+	}
+	return WithBaseURL(u), nil
+}
+
 // Option configures a Client.
 type Option func(*clientOptions)
 
 type clientOptions struct {
-	rt              http.RoundTripper
-	tokenProvider   TokenProvider
-	authMiddleware  resty.RequestMiddleware
+	baseURL        *url.URL
+	rt             http.RoundTripper
+	tokenProvider  TokenProvider
+	authMiddleware resty.RequestMiddleware
 }
 
 // WithRoundTripper configures the HTTP transport used by the underlying Resty client.
@@ -32,6 +43,21 @@ func WithRoundTripper(rt http.RoundTripper) Option {
 func WithAuthMiddleware(mw resty.RequestMiddleware) Option {
 	return func(o *clientOptions) {
 		o.authMiddleware = mw
+	}
+}
+
+// WithTokenProvider configures the client to use the given TokenProvider for authentication.
+// It is mutually exclusive with WithAuthMiddleware; if both are set, WithAuthMiddleware takes precedence.
+func WithTokenProvider(tp TokenProvider) Option {
+	return func(o *clientOptions) {
+		o.tokenProvider = tp
+	}
+}
+
+// WithBaseURL configures the client's base URL for API requests.
+func WithBaseURL(u *url.URL) Option {
+	return func(o *clientOptions) {
+		o.baseURL = u
 	}
 }
 
@@ -54,12 +80,9 @@ type Client struct {
 //
 // The ctx parameter is reserved for future context-aware initialization.
 // Callers may pass context.Background() if no specific context is needed.
-func NewClient(ctx context.Context, baseURL string, opts ...Option) *Client {
-	if _, err := url.Parse(baseURL); err != nil {
-		panic(fmt.Sprintf("invalid baseURL %q: %v", baseURL, err))
-	}
-
+func NewClient(ctx context.Context, opts ...Option) *Client {
 	cfg := &clientOptions{
+		baseURL:        nil,
 		rt:             nil,
 		tokenProvider:  nil,
 		authMiddleware: nil,
@@ -70,13 +93,13 @@ func NewClient(ctx context.Context, baseURL string, opts ...Option) *Client {
 		}
 	}
 
-	client := resty.New().SetBaseURL(baseURL)
+	client := resty.New().SetBaseURL(cfg.baseURL.String())
 	if cfg.rt != nil {
 		client.SetTransport(cfg.rt)
 	}
 
 	result := &Client{
-		baseURL:       baseURL,
+		baseURL:       cfg.baseURL.String(),
 		client:        client,
 		tokenProvider: cfg.tokenProvider,
 	}
