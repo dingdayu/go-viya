@@ -3,9 +3,10 @@
   "packages": {
     ".": {
       "release-type": "go",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": false,
       "package-name": "github.com/dingdayu/go-viya",
-      "changelog-path": "CHANGELOG.md",
-      "initial_release_version": "0.4.0"
+      "changelog-path": "CHANGELOG.md"
     }
   }
 }
