@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 )
 
@@ -21,7 +22,11 @@ func TestGetBatchServersListDecodesServers(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	servers, err := client.GetBatchServersList(context.Background())
 	if err != nil {
@@ -55,7 +60,11 @@ func TestGetBatchServerInfoDecodesServer(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	serverInfo, err := client.GetBatchServerInfo(context.Background(), "server 1")
 	if err != nil {
@@ -85,9 +94,13 @@ func TestDeleteBatchServerSendsDelete(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
-	err := client.DeleteBatchServer(context.Background(), "server 1")
+	err = client.DeleteBatchServer(context.Background(), "server 1")
 	if err != nil {
 		t.Fatalf("DeleteBatchServer() error = %v", err)
 	}

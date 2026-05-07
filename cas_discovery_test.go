@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -29,7 +30,11 @@ func TestGetCASServersRequestsCollection(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL, WithTokenProvider(staticTokenProvider("token-value")))
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
 
 	servers, err := client.GetCASServers(context.Background(), ListOptions{Limit: 10})
 	if err != nil {
@@ -54,7 +59,11 @@ func TestGetCASTablesEscapesPathAndSetsPaging(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	tables, err := client.GetCASTables(context.Background(), "server 1", "Public Data", ListOptions{Start: 5, Limit: 25})
 	if err != nil {
@@ -71,9 +80,13 @@ func TestGetCASTableColumnsReturnsStatusError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
-	_, err := client.GetCASTableColumns(context.Background(), "server-1", "Public", "missing", ListOptions{})
+	_, err = client.GetCASTableColumns(context.Background(), "server-1", "Public", "missing", ListOptions{})
 	if err == nil {
 		t.Fatal("GetCASTableColumns() error = nil, want error")
 	}
@@ -107,7 +120,11 @@ func TestGetCASTableRowsUsesDataTablesAndRowSets(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	rows, err := client.GetCASTableRows(context.Background(), "server 1", "Public Data", "class table", ListOptions{Start: 2, Limit: 3})
 	if err != nil {

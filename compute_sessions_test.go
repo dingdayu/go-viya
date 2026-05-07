@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -38,7 +39,11 @@ func TestCreateComputeSessionSendsRequest(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	session, err := client.CreateComputeSession(context.Background(), "context 1", CreateComputeSessionRequest{
 		Name:        "session one",
@@ -66,7 +71,11 @@ func TestGetComputeSessionStateReturnsPlainTextState(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	state, err := client.GetComputeSessionState(context.Background(), "session-1")
 	if err != nil {
@@ -97,7 +106,11 @@ func TestCancelComputeSessionSendsIfMatch(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	state, err := client.CancelComputeSession(context.Background(), "session-1", `"etag-1"`)
 	if err != nil {
@@ -121,7 +134,11 @@ func TestDeleteComputeSessionAcceptsAcceptedStatus(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	if err := client.DeleteComputeSession(context.Background(), "session-1"); err != nil {
 		t.Fatalf("DeleteComputeSession() error = %v", err)

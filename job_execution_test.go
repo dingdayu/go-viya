@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -50,7 +51,11 @@ func TestSubmitJobExecutionCodeSendsBody(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL, WithTokenProvider(staticTokenProvider("token-value")))
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
 
 	job, err := client.SubmitJobExecutionCode(context.Background(), SubmitJobExecutionCodeRequest{
 		Name:        "job one",
@@ -75,7 +80,11 @@ func TestGetJobExecutionJobsSetsPaging(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	jobs, err := client.GetJobExecutionJobs(context.Background(), ListOptions{Start: 3, Limit: 20})
 	if err != nil {
@@ -107,7 +116,11 @@ func TestGetAndCancelJobExecutionJobEscapeID(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	job, err := client.GetJobExecutionJob(context.Background(), "job 1")
 	if err != nil {
@@ -138,7 +151,11 @@ func TestGetJobExecutionJobLogPrefersLogTxt(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	log, err := client.GetJobExecutionJobLog(context.Background(), "job-1")
 	if err != nil {
@@ -165,7 +182,11 @@ func TestGetJobExecutionJobLogFallsBackToLogAndNoLogMessage(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	log, err := client.GetJobExecutionJobLog(context.Background(), "job-log")
 	if err != nil {

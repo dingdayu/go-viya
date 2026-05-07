@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 )
 
@@ -21,7 +22,11 @@ func TestGetComputeJobLogDecodesLines(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	log, err := client.GetComputeJobLog(context.Background(), "session-1", "0")
 	if err != nil {
@@ -49,7 +54,11 @@ func TestGetComputeJobListingTextReturnsPlainText(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	text, err := client.GetComputeJobListingText(context.Background(), "session-1", "0")
 	if err != nil {

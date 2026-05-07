@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 )
 
@@ -22,7 +23,11 @@ func TestNewClientSetsBearerAuthorizationHeader(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL, WithTokenProvider(staticTokenProvider("token-value")))
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
 
 	resp, err := client.client.R().SetContext(context.Background()).Get("/")
 	if err != nil {

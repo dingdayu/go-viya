@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -35,7 +36,11 @@ func TestGetFilesSetsPagingFilterAndAuth(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL, WithTokenProvider(staticTokenProvider("token-value")))
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
 
 	files, err := client.GetFiles(context.Background(), FileListOptions{Start: 2, Limit: 7, FilterName: "report"})
 	if err != nil {
@@ -75,7 +80,11 @@ func TestUploadFileFromReaderSendsHeadersAndBody(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	file, err := client.UploadFileFromReader(context.Background(), "report.txt", "text/plain", strings.NewReader(body))
 	if err != nil {
@@ -95,7 +104,11 @@ func TestDownloadFileEscapesIDAndReturnsBytes(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	content, err := client.DownloadFile(context.Background(), "file 1")
 	if err != nil {
@@ -112,9 +125,13 @@ func TestDownloadFileReturnsStatusError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
-	_, err := client.DownloadFile(context.Background(), "missing")
+	_, err = client.DownloadFile(context.Background(), "missing")
 	if err == nil {
 		t.Fatal("DownloadFile() error = nil, want error")
 	}

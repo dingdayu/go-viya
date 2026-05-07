@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -33,7 +34,11 @@ func TestCreateComputeJobSendsCode(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	job, err := client.CreateComputeJob(context.Background(), "session 1", CreateComputeJobRequest{
 		Code: []string{"data _null_;", "run;"},
@@ -57,7 +62,11 @@ func TestGetComputeJobsListDecodesJobs(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	jobs, err := client.GetComputeJobsList(context.Background(), "session-1")
 	if err != nil {
@@ -91,7 +100,11 @@ func TestCancelComputeJobSendsIfMatch(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
 	state, err := client.CancelComputeJob(context.Background(), "session-1", "0", `"job-etag"`)
 	if err != nil {
@@ -108,9 +121,13 @@ func TestGetComputeJobStateReturnsStatusError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(context.Background(), server.URL)
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(context.Background(), WithBaseURL(u))
 
-	_, err := client.GetComputeJobState(context.Background(), "session-1", "0")
+	_, err = client.GetComputeJobState(context.Background(), "session-1", "0")
 	if err == nil {
 		t.Fatal("GetComputeJobState() error = nil, want error")
 	}
