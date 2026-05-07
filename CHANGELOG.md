@@ -6,6 +6,34 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+## [0.4.0](https://github.com/dingdayu/go-viya/compare/v0.3.0...v0.4.0) (2026-05-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* The auth middleware is now injected via Option. Direct modifications to NewClient's internal middleware logic should be replaced with WithAuthMiddleware.
+* Rename PatchIdentitiesLDAPGroup to PatchIdentitiesLDAPUser to match its actual functionality (updating LDAP user provider configuration).
+
+### Features
+
+* rename PatchIdentitiesLDAPGroup to PatchIdentitiesLDAPUser ([7a13e53](https://github.com/dingdayu/go-viya/commit/7a13e5349dc94db04c896de6a7d671ce0e9931c7))
+
+
+### Bug Fixes
+
+* add input validation ([b9424f6](https://github.com/dingdayu/go-viya/commit/b9424f6aa7232d1ba021240915df149c5c2ae51a))
+* improve error handling ([db7b75f](https://github.com/dingdayu/go-viya/commit/db7b75fa01cfcf8b4592b15ac5ab3bc196db074a))
+* make defaultClient thread-safe ([65b8c8d](https://github.com/dingdayu/go-viya/commit/65b8c8d3e2a866aa5ad156dad0599ed70e739185))
+* migrate golangci-lint config from v1 to v2 ([10420a4](https://github.com/dingdayu/go-viya/commit/10420a4a5262531678a52fb5f615489b169f2e3d))
+* remove initial release version from release-please config ([07f15ea](https://github.com/dingdayu/go-viya/commit/07f15ea9f7fe407c7e9756156d786886af846dd6))
+* revert release version to 0.3.0 in release-please manifest ([b82935c](https://github.com/dingdayu/go-viya/commit/b82935cd385bb03307930f5958eefea93a4e90bf))
+* wrap token fetch errors with ErrViyaAuthFailed for errors.Is ([f079568](https://github.com/dingdayu/go-viya/commit/f079568eebbab8bd937e665c4078fda2910cc868))
+
+
+### Code Refactoring
+
+* decouple auth middleware from NewClient ([2192f48](https://github.com/dingdayu/go-viya/commit/2192f48f6ca5a09a7d29d8dfab8674874fe0ab67))
+
 ## [0.4.0](https://github.com/dingdayu/go-viya/compare/github.com/dingdayu/go-viya-v0.3.0...github.com/dingdayu/go-viya-v0.4.0) (2026-05-07)
 
 
