@@ -37,7 +37,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	client := viya.NewClient(ctx, baseURL, viya.WithTokenProvider(tokens))
+	baseURLOpt, err := viya.ParseURL(baseURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	client := viya.NewClient(ctx, baseURLOpt, viya.WithTokenProvider(tokens))
 
 	users, err := client.GetIdentitiesUsers(ctx)
 	if err != nil {
@@ -110,7 +114,11 @@ func (p DistributedTokenProvider) Token(ctx context.Context) (string, error) {
 }
 
 provider := DistributedTokenProvider{cache: cache}
-client := viya.NewClient(ctx, baseURL, viya.WithTokenProvider(provider))
+baseURLOpt, err := viya.ParseURL(baseURL)
+if err != nil {
+	panic(err)
+}
+client := viya.NewClient(ctx, baseURLOpt, viya.WithTokenProvider(provider))
 ```
 
 See `examples/` for complete custom provider and workflow examples.

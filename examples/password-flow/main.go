@@ -27,7 +27,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	client := viya.NewClient(ctx, baseURL, viya.WithTokenProvider(provider))
+	baseURLOpt, err := viya.ParseURL(baseURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	client := viya.NewClient(ctx, baseURLOpt, viya.WithTokenProvider(provider))
 
 	users, err := client.GetIdentitiesUsers(ctx)
 	if err != nil {

@@ -20,9 +20,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	viya.SetDefaultClient(viya.NewClient(ctx, baseURL, viya.WithTokenProvider(tokens)))
+	baseURLOpt, err := viya.ParseURL(baseURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	client := viya.NewClient(ctx, baseURLOpt, viya.WithTokenProvider(tokens))
+	viya.SetDefaultClient(client)
 
-	client, err := viya.GetDefaultClient()
+	client, err = viya.GetDefaultClient()
 	if err != nil {
 		log.Fatal(err)
 	}

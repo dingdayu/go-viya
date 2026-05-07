@@ -23,7 +23,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	client := viya.NewClient(ctx, baseURL, viya.WithTokenProvider(tokens))
+	baseURLOpt, err := viya.ParseURL(baseURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	client := viya.NewClient(ctx, baseURLOpt, viya.WithTokenProvider(tokens))
 
 	fileSet, err := client.CreateBatchFileSet(ctx, batchContextID)
 	if err != nil {
