@@ -6,6 +6,23 @@
 
 `go-viya` is a Go client library for selected SAS Viya REST APIs. It follows the REST protocols and media types documented at <https://developer.sas.com/rest-apis>, and provides token providers, a Resty-backed client, and helpers for identities, configuration, batch, CAS table operations, files, and Job Execution jobs.
 
+For AI agents and tooling, you can copy the prompt below and send it directly to your AI Agent:
+
+```text
+You are working on the open-source repository `go-viya`.
+
+Repository: https://github.com/dingdayu/go-viya
+
+Please read the repository guide in `llms.txt` first:
+- GitHub raw URL: https://raw.githubusercontent.com/dingdayu/go-viya/main/llms.txt
+- jsDelivr CDN URL: https://cdn.jsdelivr.net/gh/dingdayu/go-viya@main/llms.txt
+
+Use the guide to understand the project scope, public API, examples, and development constraints.
+Then implement the requested change by following the existing code style, keeping the API small and tested, and preserving compatibility with the current exported behavior.
+
+If the request is ambiguous, inspect the README, examples, and existing tests before making changes.
+```
+
 ## Installation
 
 ```bash

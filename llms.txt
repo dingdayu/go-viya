@@ -1,0 +1,60 @@
+go-viya
+
+Repository: https://github.com/dingdayu/go-viya
+Package: github.com/dingdayu/go-viya
+Package name: viya
+
+## Summary
+
+`go-viya` is a small, hand-written Go client library for selected SAS Viya REST APIs. It provides a Resty-backed client, OAuth2 token providers, default-client helpers, and focused support for identities, configuration, batch, compute, CAS, files, Job Execution, and observability.
+
+This repository is intentionally narrow in scope: it is not a generated client for every SAS Viya endpoint.
+
+## Start here
+
+- README: `README.md`
+- Go docs: https://pkg.go.dev/github.com/dingdayu/go-viya
+- SAS Viya REST API docs: https://developer.sas.com/rest-apis
+- SAS Logon docs: https://developer.sas.com/rest-apis/SASLogon
+- Examples: `examples/`
+
+## Core entry points
+
+- Client construction: `NewClient`, `ParseURL`, `WithBaseURL`, `WithTokenProvider`, `WithAuthMiddleware`, `WithRoundTripper`
+- Default client helpers: `SetDefaultClient`, `GetDefaultClient`, `MustGetDefaultClient`
+- Authentication: `TokenProvider`, `NewClientCredentialsTokenProvider`, `NewPasswordTokenProvider`, `NewAuthCodeTokenProvider`, `WithOAuthClient`, `WithOAuthClientProvider`
+- Auth failure sentinel: `ErrViyaAuthFailed`
+
+## What the library covers
+
+- Identities: refresh cache, list users, read LDAP configuration, patch LDAP group configuration, update LDAP object filters
+- Configuration: read configuration definitions
+- Batch: contexts, file sets, files, jobs, reusable batch servers, job logs and state
+- Compute: contexts, sessions, jobs, output, logs
+- CAS: discover servers/caslibs/tables/columns, load and unload tables, upload CSV data, promote tables
+- Files: list, upload, and download Viya Files Service files
+- Job Execution: submit SAS code, inspect jobs, cancel jobs, retrieve logs
+- Observability: OpenTelemetry spans for outbound token requests and client operations
+
+## Guidance for AI agents
+
+- Prefer the README and `examples/` before inventing new usage patterns.
+- Pass `context.Context` through I/O operations.
+- Use a SAS Viya deployment base URL, not a service-specific path.
+- Do not include real tenant URLs, credentials, tokens, or customer data in examples.
+- Treat authentication failures consistently with `ErrViyaAuthFailed`.
+- Keep changes small, tested, and aligned with existing exported API patterns.
+
+## Development checks
+
+- `gofmt -w .`
+- `go mod tidy`
+- `go vet ./...`
+- `go test ./...`
+- `go test -race ./...` for authentication, HTTP middleware, default-client, token cache, transport, or shared client changes
+
+## Notes for contributors
+
+- Keep the API narrow and focused on tested SAS Viya workflows.
+- Preserve Resty and OpenTelemetry behavior when changing shared client or token code.
+- Keep README examples aligned with the exported API.
