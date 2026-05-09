@@ -258,18 +258,6 @@ func newCredentialBase(options tokenProviderOptions, requireSecret bool) (*Clien
 	}, nil
 }
 
-func providerOptions(opts ...TokenProviderOption) tokenProviderOptions {
-	options := tokenProviderOptions{
-		clientID: defaultClientID,
-	}
-	for _, opt := range opts {
-		if opt != nil {
-			opt(&options)
-		}
-	}
-	return options
-}
-
 // NewPasswordTokenProvider creates a token provider that authenticates with username and password.
 func NewPasswordTokenProvider(username, password string, baseURL *url.URL, opts ...TokenProviderOption) (TokenProvider, error) {
 	if username == "" {
