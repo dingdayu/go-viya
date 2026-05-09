@@ -6,6 +6,17 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+## [0.5.0](https://github.com/dingdayu/go-viya/compare/v0.4.0...v0.5.0) (2026-05-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* NewClientCredentialsTokenProvider, NewPasswordTokenProvider, NewAuthCodeTokenProvider now accept *url.URL instead of string baseURL.
+
+### Features
+
+* use *url.URL for baseURL in token providers ([d30aa69](https://github.com/dingdayu/go-viya/commit/d30aa69546f26920aea2402ad0e513ad11a6dca2))
+
 ## [0.4.0](https://github.com/dingdayu/go-viya/compare/v0.3.0...v0.4.0) (2026-05-07)
 
 
