@@ -460,6 +460,66 @@ steps:
 	}
 }
 
+func TestWorkflowValidateRejectsUnknownFields(t *testing.T) {
+	workflowPath := filepath.Join(t.TempDir(), "workflow.yaml")
+	if err := os.WriteFile(workflowPath, []byte(`version: 1
+name: bad-workflow
+defaults:
+  includeOuput: true
+steps:
+  - name: prepare
+    file: prepare.sas
+`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	stdout, _, err := executeCLI("workflow", "-o", "json", "validate", "--file", workflowPath)
+	if err == nil {
+		t.Fatal("executeCLI() error = nil, want exit error")
+	}
+	if !strings.Contains(stdout, `"ok": false`) || !strings.Contains(stdout, "unknown field") {
+		t.Fatalf("stdout = %s, want unknown field failure", stdout)
+	}
+}
+
+func TestWorkflowValidateRejectsEmptySteps(t *testing.T) {
+	workflowPath := filepath.Join(t.TempDir(), "workflow.yaml")
+	if err := os.WriteFile(workflowPath, []byte(`version: 1
+name: empty-workflow
+steps: []
+`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	stdout, _, err := executeCLI("workflow", "-o", "json", "validate", "--file", workflowPath)
+	if err == nil {
+		t.Fatal("executeCLI() error = nil, want exit error")
+	}
+	if !strings.Contains(stdout, "steps must contain at least one item") {
+		t.Fatalf("stdout = %s, want empty steps failure", stdout)
+	}
+}
+
+func TestWorkflowValidateRejectsUnsupportedVersion(t *testing.T) {
+	workflowPath := filepath.Join(t.TempDir(), "workflow.yaml")
+	if err := os.WriteFile(workflowPath, []byte(`version: 2
+name: incompatible-workflow
+steps:
+  - name: prepare
+    file: prepare.sas
+`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	stdout, _, err := executeCLI("workflow", "-o", "json", "validate", "--file", workflowPath)
+	if err == nil {
+		t.Fatal("executeCLI() error = nil, want exit error")
+	}
+	if !strings.Contains(stdout, "unsupported workflow version 2") {
+		t.Fatalf("stdout = %s, want unsupported version failure", stdout)
+	}
+}
+
 func TestWorkflowRunUsesSingleComputeSessionForMultipleJobs(t *testing.T) {
 	dir := t.TempDir()
 	for name, content := range map[string]string{

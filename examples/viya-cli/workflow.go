@@ -605,19 +605,24 @@ func loadWorkflowDocument(path string) (workflowDocument, error) {
 		return workflowDocument{}, err
 	}
 
-	var raw map[string]any
+	var raw yaml.Node
 	decoder := yaml.NewDecoder(bytes.NewReader(content))
 	decoder.KnownFields(true)
 	if err := decoder.Decode(&raw); err != nil {
 		return workflowDocument{}, fmt.Errorf("decode workflow file %q: %w", path, err)
 	}
-
-	config, err := parseWorkflowProjectConfig(raw)
+	root, err := workflowMappingNode(&raw)
 	if err != nil {
 		return workflowDocument{}, fmt.Errorf("parse workflow file %q: %w", path, err)
 	}
 
-	nodes, err := parseWorkflowNodes(raw["steps"])
+	config, err := parseWorkflowProjectConfig(root)
+	if err != nil {
+		return workflowDocument{}, fmt.Errorf("parse workflow file %q: %w", path, err)
+	}
+
+	stepsNode := workflowMappingValue(root, "steps")
+	nodes, err := parseWorkflowNodes(stepsNode)
 	if err != nil {
 		return workflowDocument{}, fmt.Errorf("parse workflow file %q: %w", path, err)
 	}
@@ -667,79 +672,148 @@ func loadWorkflowUserConfig(_ cliConfig, override string) (workflowUserConfig, e
 }
 
 func parseWorkflowUserConfig(path string, content []byte) (workflowUserConfig, error) {
-	var raw map[string]any
+	var raw yaml.Node
 	decoder := yaml.NewDecoder(bytes.NewReader(content))
 	decoder.KnownFields(true)
 	if err := decoder.Decode(&raw); err != nil {
 		return workflowUserConfig{}, fmt.Errorf("decode workflow user config %q: %w", path, err)
 	}
+	root, err := workflowMappingNode(&raw)
+	if err != nil {
+		return workflowUserConfig{}, fmt.Errorf("parse workflow user config %q: %w", path, err)
+	}
+	if err := workflowRequireOnlyKnownKeys(root, path, workflowAllowedUserConfigKeys()); err != nil {
+		return workflowUserConfig{}, err
+	}
+	vars, err := workflowStringMap(workflowMappingValue(root, "variables"), path, "variables")
+	if err != nil {
+		return workflowUserConfig{}, err
+	}
 	return workflowUserConfig{
-		ContextID:   firstNonEmpty(stringField(raw, "contextId"), stringField(raw, "context_id"), stringField(raw, "computeContextId")),
-		ContextName: firstNonEmpty(stringField(raw, "contextName"), stringField(raw, "context_name"), stringField(raw, "computeContextName")),
-		Autoexec:    stringField(raw, "autoexec"),
-		PreCode:     firstNonEmpty(stringField(raw, "preCode"), stringField(raw, "pre_code")),
-		PostCode:    firstNonEmpty(stringField(raw, "postCode"), stringField(raw, "post_code")),
-		Variables:   stringMap(raw["variables"]),
+		ContextID:   firstNonEmpty(workflowStringValue(root, "contextId"), workflowStringValue(root, "context_id"), workflowStringValue(root, "computeContextId")),
+		ContextName: firstNonEmpty(workflowStringValue(root, "contextName"), workflowStringValue(root, "context_name"), workflowStringValue(root, "computeContextName")),
+		Autoexec:    workflowStringValue(root, "autoexec"),
+		PreCode:     firstNonEmpty(workflowStringValue(root, "preCode"), workflowStringValue(root, "pre_code")),
+		PostCode:    firstNonEmpty(workflowStringValue(root, "postCode"), workflowStringValue(root, "post_code")),
+		Variables:   vars,
 	}, nil
 }
 
-func parseWorkflowProjectConfig(raw map[string]any) (workflowProjectConfig, error) {
-	defaults := raw
-	if nested, ok := nestedMap(raw["defaults"]); ok {
-		defaults = nested
+func parseWorkflowProjectConfig(root *yaml.Node) (workflowProjectConfig, error) {
+	if err := workflowRequireOnlyKnownKeys(root, "workflow", workflowAllowedProjectConfigKeys()); err != nil {
+		return workflowProjectConfig{}, err
 	}
+	if versionNode := workflowMappingValue(root, "version"); versionNode != nil {
+		version, err := workflowIntValue(versionNode, "version")
+		if err != nil {
+			return workflowProjectConfig{}, err
+		}
+		if version != 1 {
+			return workflowProjectConfig{}, fmt.Errorf("unsupported workflow version %d: only version 1 is supported", version)
+		}
+	}
+	stepsNode := workflowMappingValue(root, "steps")
+	if stepsNode == nil {
+		return workflowProjectConfig{}, fmt.Errorf("steps are required")
+	}
+	if stepsNode.Kind != yaml.SequenceNode {
+		return workflowProjectConfig{}, fmt.Errorf("steps must be an array")
+	}
+	if len(stepsNode.Content) == 0 {
+		return workflowProjectConfig{}, fmt.Errorf("steps must contain at least one item")
+	}
+
+	defaultsNode := workflowMappingValue(root, "defaults")
+	if defaultsNode != nil {
+		if defaultsNode.Kind != yaml.MappingNode {
+			return workflowProjectConfig{}, fmt.Errorf("defaults must be an object")
+		}
+		if err := workflowRequireOnlyKnownKeys(defaultsNode, "defaults", workflowAllowedProjectDefaultsKeys()); err != nil {
+			return workflowProjectConfig{}, err
+		}
+	}
+
 	config := workflowProjectConfig{
-		Version:     intField(raw, 1, "version"),
-		Name:        stringField(raw, "name"),
-		MaxParallel: intField(raw, defaultWorkflowMaxParallel, "maxParallel", "max_parallel"),
+		Version:     1,
+		Name:        workflowStringValue(root, "name"),
+		MaxParallel: defaultWorkflowMaxParallel,
 		Defaults: workflowProjectDefaults{
-			ContextID:     firstNonEmpty(stringField(defaults, "contextId"), stringField(defaults, "context_id"), stringField(defaults, "computeContextId")),
-			ContextName:   firstNonEmpty(stringField(defaults, "contextName"), stringField(defaults, "context_name"), stringField(defaults, "computeContextName")),
-			IncludeOutput: boolPtrField(defaults, "includeOutput", "include_output"),
-			KeepSession:   boolPtrField(defaults, "keepSession", "keep_session"),
+			ContextID:     firstNonEmpty(workflowStringValue(root, "contextId"), workflowStringValue(root, "context_id"), workflowStringValue(root, "computeContextId"), workflowStringValue(defaultsNode, "contextId"), workflowStringValue(defaultsNode, "context_id"), workflowStringValue(defaultsNode, "computeContextId")),
+			ContextName:   firstNonEmpty(workflowStringValue(root, "contextName"), workflowStringValue(root, "context_name"), workflowStringValue(root, "computeContextName"), workflowStringValue(defaultsNode, "contextName"), workflowStringValue(defaultsNode, "context_name"), workflowStringValue(defaultsNode, "computeContextName")),
+			IncludeOutput: firstBoolValue(root, defaultsNode, "includeOutput", "include_output"),
+			KeepSession:   firstBoolValue(root, defaultsNode, "keepSession", "keep_session"),
 		},
 	}
-	if steps := raw["steps"]; steps == nil {
-		return workflowProjectConfig{}, fmt.Errorf("steps are required")
+	if maxParallelNode := workflowMappingValue(root, "maxParallel"); maxParallelNode != nil {
+		maxParallel, err := workflowIntValue(maxParallelNode, "maxParallel")
+		if err != nil {
+			return workflowProjectConfig{}, err
+		}
+		if maxParallel < 1 {
+			return workflowProjectConfig{}, fmt.Errorf("maxParallel must be at least 1")
+		}
+		config.MaxParallel = maxParallel
+	} else if maxParallelNode = workflowMappingValue(root, "max_parallel"); maxParallelNode != nil {
+		maxParallel, err := workflowIntValue(maxParallelNode, "max_parallel")
+		if err != nil {
+			return workflowProjectConfig{}, err
+		}
+		if maxParallel < 1 {
+			return workflowProjectConfig{}, fmt.Errorf("max_parallel must be at least 1")
+		}
+		config.MaxParallel = maxParallel
 	}
 	return config, nil
 }
 
-func parseWorkflowNodes(value any) ([]workflowNode, error) {
-	items, ok := value.([]any)
-	if !ok {
+func parseWorkflowNodes(node *yaml.Node) ([]workflowNode, error) {
+	if node == nil {
+		return nil, fmt.Errorf("steps are required")
+	}
+	if node.Kind != yaml.SequenceNode {
 		return nil, fmt.Errorf("steps must be an array")
 	}
-	result := make([]workflowNode, 0, len(items))
-	for _, item := range items {
-		switch value := item.(type) {
-		case map[string]any:
-			step, err := parseWorkflowStep(value)
+	if len(node.Content) == 0 {
+		return nil, fmt.Errorf("steps must contain at least one item")
+	}
+	result := make([]workflowNode, 0, len(node.Content))
+	for _, item := range node.Content {
+		switch item.Kind {
+		case yaml.MappingNode:
+			step, err := parseWorkflowStep(item)
 			if err != nil {
 				return nil, err
 			}
 			result = append(result, workflowStepNode{Step: step})
-		case []any:
-			parallel, err := parseWorkflowParallel(value)
+		case yaml.SequenceNode:
+			parallel, err := parseWorkflowParallel(item)
 			if err != nil {
 				return nil, err
 			}
 			result = append(result, workflowParallelNode{Steps: parallel})
 		default:
-			return nil, fmt.Errorf("workflow steps must be objects or nested arrays, got %T", item)
+			return nil, fmt.Errorf("workflow steps must be objects or nested arrays, got %s", yamlKindName(item.Kind))
 		}
 	}
 	return result, nil
 }
 
-func parseWorkflowParallel(items []any) ([]workflowStep, error) {
-	result := make([]workflowStep, 0, len(items))
-	for _, item := range items {
-		stepMap, ok := item.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("parallel workflow groups must contain step objects, got %T", item)
+func parseWorkflowParallel(node *yaml.Node) ([]workflowStep, error) {
+	if node == nil {
+		return nil, fmt.Errorf("parallel workflow group must not be empty")
+	}
+	if node.Kind != yaml.SequenceNode {
+		return nil, fmt.Errorf("parallel workflow groups must be arrays")
+	}
+	if len(node.Content) == 0 {
+		return nil, fmt.Errorf("parallel workflow group must contain at least one step")
+	}
+	result := make([]workflowStep, 0, len(node.Content))
+	for _, item := range node.Content {
+		if item.Kind != yaml.MappingNode {
+			return nil, fmt.Errorf("parallel workflow groups must contain step objects, got %s", yamlKindName(item.Kind))
 		}
-		step, err := parseWorkflowStep(stepMap)
+		step, err := parseWorkflowStep(item)
 		if err != nil {
 			return nil, err
 		}
@@ -748,17 +822,27 @@ func parseWorkflowParallel(items []any) ([]workflowStep, error) {
 	return result, nil
 }
 
-func parseWorkflowStep(raw map[string]any) (workflowStep, error) {
-	if len(raw) == 0 {
+func parseWorkflowStep(node *yaml.Node) (workflowStep, error) {
+	if node == nil {
 		return workflowStep{}, fmt.Errorf("workflow step must not be empty")
 	}
+	if node.Kind != yaml.MappingNode {
+		return workflowStep{}, fmt.Errorf("workflow step must be an object")
+	}
+	if err := workflowRequireOnlyKnownKeys(node, "workflow step", workflowAllowedStepKeys()); err != nil {
+		return workflowStep{}, err
+	}
+	variables, err := workflowStringMap(workflowMappingValue(node, "variables"), "workflow step", "variables")
+	if err != nil {
+		return workflowStep{}, err
+	}
 	step := workflowStep{
-		Name:      firstNonEmpty(stringField(raw, "name"), stringField(raw, "id")),
-		File:      firstNonEmpty(stringField(raw, "file"), stringField(raw, "work"), stringField(raw, "path")),
-		Code:      stringField(raw, "code"),
-		Log:       stringField(raw, "log"),
-		Listing:   stringField(raw, "listing"),
-		Variables: stringMap(raw["variables"]),
+		Name:      firstNonEmpty(workflowStringValue(node, "name"), workflowStringValue(node, "id")),
+		File:      firstNonEmpty(workflowStringValue(node, "file"), workflowStringValue(node, "work"), workflowStringValue(node, "path")),
+		Code:      workflowStringValue(node, "code"),
+		Log:       workflowStringValue(node, "log"),
+		Listing:   workflowStringValue(node, "listing"),
+		Variables: variables,
 	}
 	if step.File == "" && strings.TrimSpace(step.Code) == "" {
 		return workflowStep{}, fmt.Errorf("workflow step must define either file or code")
@@ -769,93 +853,202 @@ func parseWorkflowStep(raw map[string]any) (workflowStep, error) {
 	return step, nil
 }
 
-func stringField(values map[string]any, keys ...string) string {
-	for _, key := range keys {
-		if value, ok := values[key]; ok {
-			if text := stringValue(value); text != "" {
-				return text
-			}
-		}
+func workflowAllowedProjectConfigKeys() map[string]struct{} {
+	return map[string]struct{}{
+		"$schema":            {},
+		"version":            {},
+		"name":               {},
+		"maxParallel":        {},
+		"max_parallel":       {},
+		"contextId":          {},
+		"context_id":         {},
+		"computeContextId":   {},
+		"contextName":        {},
+		"context_name":       {},
+		"computeContextName": {},
+		"includeOutput":      {},
+		"include_output":     {},
+		"keepSession":        {},
+		"keep_session":       {},
+		"defaults":           {},
+		"steps":              {},
 	}
-	return ""
 }
 
-func boolPtrField(values map[string]any, keys ...string) *bool {
-	for _, key := range keys {
-		if value, ok := values[key]; ok {
-			if b, ok := boolValue(value); ok {
-				return &b
-			}
+func workflowAllowedProjectDefaultsKeys() map[string]struct{} {
+	return map[string]struct{}{
+		"contextId":          {},
+		"context_id":         {},
+		"computeContextId":   {},
+		"contextName":        {},
+		"context_name":       {},
+		"computeContextName": {},
+		"includeOutput":      {},
+		"include_output":     {},
+		"keepSession":        {},
+		"keep_session":       {},
+	}
+}
+
+func workflowAllowedStepKeys() map[string]struct{} {
+	return map[string]struct{}{
+		"id":        {},
+		"name":      {},
+		"file":      {},
+		"work":      {},
+		"path":      {},
+		"code":      {},
+		"log":       {},
+		"listing":   {},
+		"variables": {},
+	}
+}
+
+func workflowAllowedUserConfigKeys() map[string]struct{} {
+	return map[string]struct{}{
+		"$schema":            {},
+		"contextId":          {},
+		"context_id":         {},
+		"computeContextId":   {},
+		"contextName":        {},
+		"context_name":       {},
+		"computeContextName": {},
+		"autoexec":           {},
+		"preCode":            {},
+		"pre_code":           {},
+		"postCode":           {},
+		"post_code":          {},
+		"variables":          {},
+	}
+}
+
+func workflowRequireOnlyKnownKeys(node *yaml.Node, label string, allowed map[string]struct{}) error {
+	if node == nil {
+		return nil
+	}
+	if node.Kind != yaml.MappingNode {
+		return fmt.Errorf("%s must be an object", label)
+	}
+	for i := 0; i < len(node.Content); i += 2 {
+		key := node.Content[i]
+		if _, ok := allowed[key.Value]; !ok {
+			return fmt.Errorf("%s contains unknown field %q", label, key.Value)
 		}
 	}
 	return nil
 }
 
-func intField(values map[string]any, fallback int, keys ...string) int {
-	for _, key := range keys {
-		if value, ok := values[key]; ok {
-			if n, ok := intValue(value); ok {
-				return n
-			}
-		}
+func workflowMappingNode(node *yaml.Node) (*yaml.Node, error) {
+	if node == nil {
+		return nil, fmt.Errorf("workflow file is empty")
 	}
-	return fallback
+	if node.Kind == yaml.DocumentNode {
+		if len(node.Content) == 0 {
+			return nil, fmt.Errorf("workflow file is empty")
+		}
+		node = node.Content[0]
+	}
+	if node.Kind != yaml.MappingNode {
+		return nil, fmt.Errorf("workflow file must be a mapping object")
+	}
+	return node, nil
 }
 
-func stringMap(value any) map[string]string {
-	if value == nil {
+func workflowMappingValue(node *yaml.Node, key string) *yaml.Node {
+	if node == nil || node.Kind != yaml.MappingNode {
 		return nil
 	}
-	values, ok := value.(map[string]any)
-	if !ok {
-		return nil
+	for i := 0; i < len(node.Content); i += 2 {
+		if node.Content[i].Value == key {
+			return node.Content[i+1]
+		}
 	}
-	result := make(map[string]string, len(values))
-	for key, raw := range values {
-		if text := stringValue(raw); text != "" {
-			result[key] = text
+	return nil
+}
+
+func workflowStringValue(node *yaml.Node, keys ...string) string {
+	for _, key := range keys {
+		valueNode := workflowMappingValue(node, key)
+		if valueNode == nil {
+			continue
+		}
+		var text string
+		if err := valueNode.Decode(&text); err == nil && text != "" {
+			return text
+		}
+	}
+	return ""
+}
+
+func workflowIntValue(node *yaml.Node, field string) (int, error) {
+	var value int
+	if err := node.Decode(&value); err != nil {
+		return 0, fmt.Errorf("%s must be an integer", field)
+	}
+	return value, nil
+}
+
+func firstBoolValue(root *yaml.Node, fallback *yaml.Node, keys ...string) *bool {
+	if value := workflowBoolValue(root, keys...); value != nil {
+		return value
+	}
+	return workflowBoolValue(fallback, keys...)
+}
+
+func workflowBoolValue(node *yaml.Node, keys ...string) *bool {
+	for _, key := range keys {
+		valueNode := workflowMappingValue(node, key)
+		if valueNode == nil {
+			continue
+		}
+		var value bool
+		if err := valueNode.Decode(&value); err == nil {
+			return &value
+		}
+	}
+	return nil
+}
+
+func workflowStringMap(node *yaml.Node, label string, field string) (map[string]string, error) {
+	if node == nil {
+		return nil, nil
+	}
+	if node.Kind != yaml.MappingNode {
+		return nil, fmt.Errorf("%s.%s must be an object", label, field)
+	}
+	result := make(map[string]string, len(node.Content)/2)
+	for i := 0; i < len(node.Content); i += 2 {
+		key := node.Content[i].Value
+		valueNode := node.Content[i+1]
+		var value string
+		if err := valueNode.Decode(&value); err != nil {
+			return nil, fmt.Errorf("%s.%s[%s] must be a string", label, field, key)
+		}
+		if value != "" {
+			result[key] = value
 		}
 	}
 	if len(result) == 0 {
-		return nil
+		return nil, nil
 	}
-	return result
+	return result, nil
 }
 
-func boolValue(value any) (bool, bool) {
-	switch v := value.(type) {
-	case bool:
-		return v, true
-	case string:
-		switch strings.ToLower(strings.TrimSpace(v)) {
-		case "true", "yes", "1":
-			return true, true
-		case "false", "no", "0":
-			return false, true
-		}
+func yamlKindName(kind yaml.Kind) string {
+	switch kind {
+	case yaml.DocumentNode:
+		return "document"
+	case yaml.MappingNode:
+		return "mapping"
+	case yaml.SequenceNode:
+		return "sequence"
+	case yaml.ScalarNode:
+		return "scalar"
+	case yaml.AliasNode:
+		return "alias"
+	default:
+		return "unknown"
 	}
-	return false, false
-}
-
-func intValue(value any) (int, bool) {
-	switch v := value.(type) {
-	case int:
-		return v, true
-	case int64:
-		return int(v), true
-	case float64:
-		return int(v), true
-	case uint:
-		return int(v), true
-	case uint64:
-		return int(v), true
-	case string:
-		var n int
-		if _, err := fmt.Sscanf(strings.TrimSpace(v), "%d", &n); err == nil {
-			return n, true
-		}
-	}
-	return 0, false
 }
 
 func resolveWorkflowPath(baseDir, path string) (string, error) {
