@@ -30,6 +30,8 @@ type workflowFlagOverrides struct {
 	includeOutput bool
 	keepSession   bool
 	maxParallel   bool
+	contextID     bool
+	contextName   bool
 }
 
 type workflowUserConfig struct {
@@ -160,6 +162,8 @@ func newWorkflowRunCommand(ioStreams cliIO, opts *workflowOptions) *cobra.Comman
 				includeOutput: cmd.Flag("include-output").Changed,
 				keepSession:   cmd.Flag("keep-session").Changed,
 				maxParallel:   cmd.Flag("max-parallel").Changed,
+				contextID:     cmd.Flag("context-id").Changed,
+				contextName:   cmd.Flag("context-name").Changed,
 			}
 			result, err := runWorkflow(ioStreams, *opts, file, overrides)
 			if err != nil {
@@ -233,7 +237,7 @@ func runWorkflow(ioStreams cliIO, opts workflowOptions, file string, overrides w
 	}
 	defer cancel()
 
-	contextID, contextName, err := resolveWorkflowContext(ctx, client, cfg, doc)
+	contextID, contextName, err := resolveWorkflowContext(ctx, client, cfg, doc, overrides)
 	if err != nil {
 		return workflowRunResult{Error: err.Error()}, writeWorkflowFailure(ioStreams.stdout, opts.cfg.Output, workflowRunResult{Error: err.Error()})
 	}
@@ -561,9 +565,15 @@ func stepDisplayName(step workflowStep, index int) string {
 	return workflowDisplayName(step, index)
 }
 
-func resolveWorkflowContext(ctx context.Context, client *viya.Client, cfg cliConfig, doc workflowDocument) (string, string, error) {
-	contextID := firstNonEmpty(doc.Config.Defaults.ContextID, doc.User.ContextID, cfg.ContextID)
-	contextName := firstNonEmpty(doc.Config.Defaults.ContextName, doc.User.ContextName, cfg.ContextName)
+func resolveWorkflowContext(ctx context.Context, client *viya.Client, cfg cliConfig, doc workflowDocument, overrides workflowFlagOverrides) (string, string, error) {
+	contextID := firstNonEmpty(doc.Config.Defaults.ContextID, doc.User.ContextID)
+	if overrides.contextID {
+		contextID = firstNonEmpty(cfg.ContextID, contextID)
+	}
+	contextName := firstNonEmpty(doc.Config.Defaults.ContextName, doc.User.ContextName)
+	if overrides.contextName {
+		contextName = firstNonEmpty(cfg.ContextName, contextName)
+	}
 	if contextID != "" {
 		if contextName != "" {
 			return contextID, contextName, nil
