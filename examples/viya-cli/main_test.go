@@ -77,7 +77,7 @@ func TestResolveWorkflowContextPrefersCLIOverrides(t *testing.T) {
 		ContextName: "cli-name",
 	}
 
-	contextID, contextName, err := resolveWorkflowContext(t.Context(), nil, cfg, doc)
+	contextID, contextName, err := resolveWorkflowContext(t.Context(), nil, cfg, doc, workflowFlagOverrides{contextID: true, contextName: true})
 	if err != nil {
 		t.Fatalf("resolveWorkflowContext() error = %v", err)
 	}
@@ -85,6 +85,34 @@ func TestResolveWorkflowContextPrefersCLIOverrides(t *testing.T) {
 		t.Fatalf("contextID = %q, want %q", got, want)
 	}
 	if got, want := contextName, "cli-name"; got != want {
+		t.Fatalf("contextName = %q, want %q", got, want)
+	}
+}
+
+func TestResolveWorkflowContextDoesNotUseConfiguredDefaultsAsCLIOverrides(t *testing.T) {
+	doc := workflowDocument{
+		Config: workflowProjectConfig{
+			Defaults: workflowProjectDefaults{
+				ContextID:   "workflow-id",
+				ContextName: "workflow-name",
+			},
+		},
+		User: workflowUserConfig{
+			ContextID:   "user-id",
+			ContextName: "user-name",
+		},
+	}
+	// cfg values simulate ambient config loaded from env/profile, not explicit CLI flags.
+	cfg := cliConfig{ContextID: "env-id", ContextName: "env-name"}
+
+	contextID, contextName, err := resolveWorkflowContext(t.Context(), nil, cfg, doc, workflowFlagOverrides{})
+	if err != nil {
+		t.Fatalf("resolveWorkflowContext() error = %v", err)
+	}
+	if got, want := contextID, "workflow-id"; got != want {
+		t.Fatalf("contextID = %q, want %q", got, want)
+	}
+	if got, want := contextName, "workflow-name"; got != want {
 		t.Fatalf("contextName = %q, want %q", got, want)
 	}
 }
