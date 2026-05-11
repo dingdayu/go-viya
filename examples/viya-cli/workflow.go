@@ -566,16 +566,18 @@ func stepDisplayName(step workflowStep, index int) string {
 }
 
 func resolveWorkflowContext(ctx context.Context, client *viya.Client, cfg cliConfig, doc workflowDocument, overrides workflowFlagOverrides) (string, string, error) {
-	contextID := firstNonEmpty(doc.Config.Defaults.ContextID, doc.User.ContextID)
-	if overrides.contextID {
-		contextID = firstNonEmpty(cfg.ContextID, contextID)
+	contextID, contextIDSource := firstWorkflowContextValue(workflowContextCandidate{value: doc.Config.Defaults.ContextID, source: "workflow"}, workflowContextCandidate{value: doc.User.ContextID, source: "user"})
+	if overrides.contextID && cfg.ContextID != "" {
+		contextID = cfg.ContextID
+		contextIDSource = "cli"
 	}
-	contextName := firstNonEmpty(doc.Config.Defaults.ContextName, doc.User.ContextName)
-	if overrides.contextName {
-		contextName = firstNonEmpty(cfg.ContextName, contextName)
+	contextName, contextNameSource := firstWorkflowContextValue(workflowContextCandidate{value: doc.Config.Defaults.ContextName, source: "workflow"}, workflowContextCandidate{value: doc.User.ContextName, source: "user"})
+	if overrides.contextName && cfg.ContextName != "" {
+		contextName = cfg.ContextName
+		contextNameSource = "cli"
 	}
 	if contextID != "" {
-		if contextName != "" {
+		if contextName != "" && contextIDSource == contextNameSource {
 			return contextID, contextName, nil
 		}
 		info, err := client.GetComputeContextInfo(ctx, contextID)
@@ -597,6 +599,20 @@ func resolveWorkflowContext(ctx context.Context, client *viya.Client, cfg cliCon
 		return "", "", fmt.Errorf("compute context %q was not found", contextName)
 	}
 	return resolveComputeContext(ctx, client, cfg)
+}
+
+type workflowContextCandidate struct {
+	value  string
+	source string
+}
+
+func firstWorkflowContextValue(candidates ...workflowContextCandidate) (string, string) {
+	for _, candidate := range candidates {
+		if candidate.value != "" {
+			return candidate.value, candidate.source
+		}
+	}
+	return "", ""
 }
 
 func loadWorkflowDocument(path string) (workflowDocument, error) {

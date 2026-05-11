@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestCASServersCommandWritesJSON(t *testing.T) {
@@ -113,6 +114,43 @@ func TestResolveWorkflowContextDoesNotUseConfiguredDefaultsAsCLIOverrides(t *tes
 		t.Fatalf("contextID = %q, want %q", got, want)
 	}
 	if got, want := contextName, "workflow-name"; got != want {
+		t.Fatalf("contextName = %q, want %q", got, want)
+	}
+}
+
+func TestResolveWorkflowContextUsesNameFromChosenContextID(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if got, want := r.Method, http.MethodGet; got != want {
+			t.Fatalf("method = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Path, "/compute/contexts/workflow-id"; got != want {
+			t.Fatalf("path = %q, want %q", got, want)
+		}
+		_, _ = w.Write([]byte(`{"id":"workflow-id","name":"workflow context","launchType":"service","version":1}`))
+	}))
+	defer server.Close()
+
+	client, ctx, cancel, cfg, err := newConfiguredClient(cliConfig{BaseURL: server.URL, AccessToken: "test-token", Timeout: time.Second})
+	if err != nil {
+		t.Fatalf("newConfiguredClient() error = %v", err)
+	}
+	defer cancel()
+	doc := workflowDocument{
+		Config: workflowProjectConfig{
+			Defaults: workflowProjectDefaults{ContextID: "workflow-id"},
+		},
+		User: workflowUserConfig{ContextName: "user context"},
+	}
+
+	contextID, contextName, err := resolveWorkflowContext(ctx, client, cfg, doc, workflowFlagOverrides{})
+	if err != nil {
+		t.Fatalf("resolveWorkflowContext() error = %v", err)
+	}
+	if got, want := contextID, "workflow-id"; got != want {
+		t.Fatalf("contextID = %q, want %q", got, want)
+	}
+	if got, want := contextName, "workflow context"; got != want {
 		t.Fatalf("contextName = %q, want %q", got, want)
 	}
 }
