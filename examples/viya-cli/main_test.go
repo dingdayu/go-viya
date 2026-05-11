@@ -520,6 +520,148 @@ steps:
 	}
 }
 
+func TestWorkflowValidateRejectsMalformedStringScalars(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{
+			name: "project name",
+			content: `version: 1
+name: 123
+steps:
+  - name: prepare
+    code: '%put ok;'
+`,
+			want: "workflow.name must be a string",
+		},
+		{
+			name: "step file",
+			content: `version: 1
+name: bad-file
+steps:
+  - name: prepare
+    file: ["prog.sas"]
+`,
+			want: "workflow step.file must be a string",
+		},
+		{
+			name: "null step name",
+			content: `version: 1
+name: null-field
+steps:
+  - name: null
+    code: '%put ok;'
+`,
+			want: "workflow step.name must be a string",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			workflowPath := filepath.Join(t.TempDir(), "workflow.yaml")
+			if err := os.WriteFile(workflowPath, []byte(tt.content), 0o644); err != nil {
+				t.Fatalf("write workflow: %v", err)
+			}
+
+			stdout, _, err := executeCLI("workflow", "-o", "json", "validate", "--file", workflowPath)
+			if err == nil {
+				t.Fatal("executeCLI() error = nil, want exit error")
+			}
+			if !strings.Contains(stdout, tt.want) {
+				t.Fatalf("stdout = %s, want %q", stdout, tt.want)
+			}
+		})
+	}
+}
+
+func TestWorkflowValidateRejectsMalformedBooleanDefaults(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{
+			name: "top level include output",
+			content: `version: 1
+name: bad-bool
+includeOutput: "nope"
+steps:
+  - name: prepare
+    code: '%put ok;'
+`,
+			want: "workflow.includeOutput must be a boolean",
+		},
+		{
+			name: "defaults keep session",
+			content: `version: 1
+name: bad-bool
+defaults:
+  keepSession: 1
+steps:
+  - name: prepare
+    code: '%put ok;'
+`,
+			want: "defaults.keepSession must be a boolean",
+		},
+		{
+			name: "null include output",
+			content: `version: 1
+name: bad-bool
+includeOutput: null
+steps:
+  - name: prepare
+    code: '%put ok;'
+`,
+			want: "workflow.includeOutput must be a boolean",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			workflowPath := filepath.Join(t.TempDir(), "workflow.yaml")
+			if err := os.WriteFile(workflowPath, []byte(tt.content), 0o644); err != nil {
+				t.Fatalf("write workflow: %v", err)
+			}
+
+			stdout, _, err := executeCLI("workflow", "-o", "json", "validate", "--file", workflowPath)
+			if err == nil {
+				t.Fatal("executeCLI() error = nil, want exit error")
+			}
+			if !strings.Contains(stdout, tt.want) {
+				t.Fatalf("stdout = %s, want %q", stdout, tt.want)
+			}
+		})
+	}
+}
+
+func TestWorkflowRunRejectsMalformedUserConfigStringScalars(t *testing.T) {
+	dir := t.TempDir()
+	workflowPath := filepath.Join(dir, "workflow.yaml")
+	if err := os.WriteFile(workflowPath, []byte(`version: 1
+name: bad-user-config
+steps:
+  - name: prepare
+    code: '%put ok;'
+`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+	userConfigPath := filepath.Join(dir, "user.yaml")
+	if err := os.WriteFile(userConfigPath, []byte(`contextName: ["ctx"]
+`), 0o644); err != nil {
+		t.Fatalf("write user config: %v", err)
+	}
+
+	stdout, _, err := executeCLI("workflow", "--base-url", "https://example.invalid", "--access-token", "test-token", "--user-config", userConfigPath, "-o", "json", "run", "--file", workflowPath)
+	if err == nil {
+		t.Fatal("executeCLI() error = nil, want exit error")
+	}
+	if !strings.Contains(stdout, "user.yaml.contextName must be a string") {
+		t.Fatalf("stdout = %s, want malformed user config failure", stdout)
+	}
+}
+
 func TestWorkflowRunUsesSingleComputeSessionForMultipleJobs(t *testing.T) {
 	dir := t.TempDir()
 	for name, content := range map[string]string{

@@ -689,12 +689,32 @@ func parseWorkflowUserConfig(path string, content []byte) (workflowUserConfig, e
 	if err != nil {
 		return workflowUserConfig{}, err
 	}
+	contextID, err := workflowStringValue(root, path, "contextId", "context_id", "computeContextId")
+	if err != nil {
+		return workflowUserConfig{}, err
+	}
+	contextName, err := workflowStringValue(root, path, "contextName", "context_name", "computeContextName")
+	if err != nil {
+		return workflowUserConfig{}, err
+	}
+	autoexec, err := workflowStringValue(root, path, "autoexec")
+	if err != nil {
+		return workflowUserConfig{}, err
+	}
+	preCode, err := workflowStringValue(root, path, "preCode", "pre_code")
+	if err != nil {
+		return workflowUserConfig{}, err
+	}
+	postCode, err := workflowStringValue(root, path, "postCode", "post_code")
+	if err != nil {
+		return workflowUserConfig{}, err
+	}
 	return workflowUserConfig{
-		ContextID:   firstNonEmpty(workflowStringValue(root, "contextId"), workflowStringValue(root, "context_id"), workflowStringValue(root, "computeContextId")),
-		ContextName: firstNonEmpty(workflowStringValue(root, "contextName"), workflowStringValue(root, "context_name"), workflowStringValue(root, "computeContextName")),
-		Autoexec:    workflowStringValue(root, "autoexec"),
-		PreCode:     firstNonEmpty(workflowStringValue(root, "preCode"), workflowStringValue(root, "pre_code")),
-		PostCode:    firstNonEmpty(workflowStringValue(root, "postCode"), workflowStringValue(root, "post_code")),
+		ContextID:   contextID,
+		ContextName: contextName,
+		Autoexec:    autoexec,
+		PreCode:     preCode,
+		PostCode:    postCode,
 		Variables:   vars,
 	}, nil
 }
@@ -733,15 +753,47 @@ func parseWorkflowProjectConfig(root *yaml.Node) (workflowProjectConfig, error) 
 		}
 	}
 
+	name, err := workflowStringValue(root, "workflow", "name")
+	if err != nil {
+		return workflowProjectConfig{}, err
+	}
+	contextID, err := workflowStringValue(root, "workflow", "contextId", "context_id", "computeContextId")
+	if err != nil {
+		return workflowProjectConfig{}, err
+	}
+	if contextID == "" {
+		contextID, err = workflowStringValue(defaultsNode, "defaults", "contextId", "context_id", "computeContextId")
+		if err != nil {
+			return workflowProjectConfig{}, err
+		}
+	}
+	contextName, err := workflowStringValue(root, "workflow", "contextName", "context_name", "computeContextName")
+	if err != nil {
+		return workflowProjectConfig{}, err
+	}
+	if contextName == "" {
+		contextName, err = workflowStringValue(defaultsNode, "defaults", "contextName", "context_name", "computeContextName")
+		if err != nil {
+			return workflowProjectConfig{}, err
+		}
+	}
+	includeOutput, err := firstBoolValue(root, defaultsNode, "includeOutput", "include_output")
+	if err != nil {
+		return workflowProjectConfig{}, err
+	}
+	keepSession, err := firstBoolValue(root, defaultsNode, "keepSession", "keep_session")
+	if err != nil {
+		return workflowProjectConfig{}, err
+	}
 	config := workflowProjectConfig{
 		Version:     1,
-		Name:        workflowStringValue(root, "name"),
+		Name:        name,
 		MaxParallel: defaultWorkflowMaxParallel,
 		Defaults: workflowProjectDefaults{
-			ContextID:     firstNonEmpty(workflowStringValue(root, "contextId"), workflowStringValue(root, "context_id"), workflowStringValue(root, "computeContextId"), workflowStringValue(defaultsNode, "contextId"), workflowStringValue(defaultsNode, "context_id"), workflowStringValue(defaultsNode, "computeContextId")),
-			ContextName:   firstNonEmpty(workflowStringValue(root, "contextName"), workflowStringValue(root, "context_name"), workflowStringValue(root, "computeContextName"), workflowStringValue(defaultsNode, "contextName"), workflowStringValue(defaultsNode, "context_name"), workflowStringValue(defaultsNode, "computeContextName")),
-			IncludeOutput: firstBoolValue(root, defaultsNode, "includeOutput", "include_output"),
-			KeepSession:   firstBoolValue(root, defaultsNode, "keepSession", "keep_session"),
+			ContextID:     contextID,
+			ContextName:   contextName,
+			IncludeOutput: includeOutput,
+			KeepSession:   keepSession,
 		},
 	}
 	if maxParallelNode := workflowMappingValue(root, "maxParallel"); maxParallelNode != nil {
@@ -836,12 +888,32 @@ func parseWorkflowStep(node *yaml.Node) (workflowStep, error) {
 	if err != nil {
 		return workflowStep{}, err
 	}
+	name, err := workflowStringValue(node, "workflow step", "name", "id")
+	if err != nil {
+		return workflowStep{}, err
+	}
+	file, err := workflowStringValue(node, "workflow step", "file", "work", "path")
+	if err != nil {
+		return workflowStep{}, err
+	}
+	code, err := workflowStringValue(node, "workflow step", "code")
+	if err != nil {
+		return workflowStep{}, err
+	}
+	logPath, err := workflowStringValue(node, "workflow step", "log")
+	if err != nil {
+		return workflowStep{}, err
+	}
+	listingPath, err := workflowStringValue(node, "workflow step", "listing")
+	if err != nil {
+		return workflowStep{}, err
+	}
 	step := workflowStep{
-		Name:      firstNonEmpty(workflowStringValue(node, "name"), workflowStringValue(node, "id")),
-		File:      firstNonEmpty(workflowStringValue(node, "file"), workflowStringValue(node, "work"), workflowStringValue(node, "path")),
-		Code:      workflowStringValue(node, "code"),
-		Log:       workflowStringValue(node, "log"),
-		Listing:   workflowStringValue(node, "listing"),
+		Name:      name,
+		File:      file,
+		Code:      code,
+		Log:       logPath,
+		Listing:   listingPath,
 		Variables: variables,
 	}
 	if step.File == "" && strings.TrimSpace(step.Code) == "" {
@@ -966,18 +1038,24 @@ func workflowMappingValue(node *yaml.Node, key string) *yaml.Node {
 	return nil
 }
 
-func workflowStringValue(node *yaml.Node, keys ...string) string {
+func workflowStringValue(node *yaml.Node, label string, keys ...string) (string, error) {
 	for _, key := range keys {
 		valueNode := workflowMappingValue(node, key)
 		if valueNode == nil {
 			continue
 		}
+		if valueNode.Kind != yaml.ScalarNode || valueNode.ShortTag() != "!!str" {
+			return "", fmt.Errorf("%s.%s must be a string", label, key)
+		}
 		var text string
-		if err := valueNode.Decode(&text); err == nil && text != "" {
-			return text
+		if err := valueNode.Decode(&text); err != nil {
+			return "", fmt.Errorf("%s.%s must be a string: %w", label, key, err)
+		}
+		if text != "" {
+			return text, nil
 		}
 	}
-	return ""
+	return "", nil
 }
 
 func workflowIntValue(node *yaml.Node, field string) (int, error) {
@@ -988,25 +1066,29 @@ func workflowIntValue(node *yaml.Node, field string) (int, error) {
 	return value, nil
 }
 
-func firstBoolValue(root *yaml.Node, fallback *yaml.Node, keys ...string) *bool {
-	if value := workflowBoolValue(root, keys...); value != nil {
-		return value
+func firstBoolValue(root *yaml.Node, fallback *yaml.Node, keys ...string) (*bool, error) {
+	if value, err := workflowBoolValue(root, "workflow", keys...); value != nil || err != nil {
+		return value, err
 	}
-	return workflowBoolValue(fallback, keys...)
+	return workflowBoolValue(fallback, "defaults", keys...)
 }
 
-func workflowBoolValue(node *yaml.Node, keys ...string) *bool {
+func workflowBoolValue(node *yaml.Node, label string, keys ...string) (*bool, error) {
 	for _, key := range keys {
 		valueNode := workflowMappingValue(node, key)
 		if valueNode == nil {
 			continue
 		}
-		var value bool
-		if err := valueNode.Decode(&value); err == nil {
-			return &value
+		if valueNode.Kind != yaml.ScalarNode || valueNode.ShortTag() != "!!bool" {
+			return nil, fmt.Errorf("%s.%s must be a boolean", label, key)
 		}
+		var value bool
+		if err := valueNode.Decode(&value); err != nil {
+			return nil, fmt.Errorf("%s.%s must be a boolean: %w", label, key, err)
+		}
+		return &value, nil
 	}
-	return nil
+	return nil, nil
 }
 
 func workflowStringMap(node *yaml.Node, label string, field string) (map[string]string, error) {
