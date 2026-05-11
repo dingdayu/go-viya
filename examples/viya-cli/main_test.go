@@ -781,7 +781,7 @@ steps:
 				t.Fatal("executeCLI() error = nil, want exit error")
 			}
 			if tt.name == "user variable name" {
-				if !strings.Contains(stdout, tt.want) {
+				if !strings.Contains(stdout, "user.yaml.variables[bad.name] must be a valid SAS macro variable name") {
 					t.Fatalf("stdout = %s, want workflow variable failure", stdout)
 				}
 				return
