@@ -59,6 +59,36 @@ func TestCASServersCommandWritesJSON(t *testing.T) {
 	}
 }
 
+func TestResolveWorkflowContextPrefersCLIOverrides(t *testing.T) {
+	doc := workflowDocument{
+		Config: workflowProjectConfig{
+			Defaults: workflowProjectDefaults{
+				ContextID:   "workflow-id",
+				ContextName: "workflow-name",
+			},
+		},
+		User: workflowUserConfig{
+			ContextID:   "user-id",
+			ContextName: "user-name",
+		},
+	}
+	cfg := cliConfig{
+		ContextID:   "cli-id",
+		ContextName: "cli-name",
+	}
+
+	contextID, contextName, err := resolveWorkflowContext(t.Context(), nil, cfg, doc)
+	if err != nil {
+		t.Fatalf("resolveWorkflowContext() error = %v", err)
+	}
+	if got, want := contextID, "cli-id"; got != want {
+		t.Fatalf("contextID = %q, want %q", got, want)
+	}
+	if got, want := contextName, "cli-name"; got != want {
+		t.Fatalf("contextName = %q, want %q", got, want)
+	}
+}
+
 func TestCASCommandMissingFlagWritesFailureJSON(t *testing.T) {
 	stdout, _, err := executeCLI("cas", "--base-url", "https://viya.example.com", "--access-token", "test-token", "-o", "json", "tables", "--server", "server-1")
 	if err == nil {

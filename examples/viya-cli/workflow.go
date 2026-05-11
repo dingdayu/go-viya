@@ -562,8 +562,8 @@ func stepDisplayName(step workflowStep, index int) string {
 }
 
 func resolveWorkflowContext(ctx context.Context, client *viya.Client, cfg cliConfig, doc workflowDocument) (string, string, error) {
-	contextID := firstNonEmpty(doc.Config.Defaults.ContextID, doc.User.ContextID, cfg.ContextID)
-	contextName := firstNonEmpty(doc.Config.Defaults.ContextName, doc.User.ContextName, cfg.ContextName)
+	contextID := firstNonEmpty(cfg.ContextID, doc.Config.Defaults.ContextID, doc.User.ContextID)
+	contextName := firstNonEmpty(cfg.ContextName, doc.Config.Defaults.ContextName, doc.User.ContextName)
 	if contextID != "" {
 		if contextName != "" {
 			return contextID, contextName, nil
