@@ -447,6 +447,11 @@ func (r workflowRunner) runStep(ctx context.Context, step workflowStep) (workflo
 		stepResult.Error = err.Error()
 		return stepResult, err
 	}
+	if result.State != "completed" {
+		err = fmt.Errorf("compute job finished with state %q", result.State)
+		stepResult.Error = err.Error()
+		return stepResult, err
+	}
 
 	if step.Log != "" && result.Log != "" {
 		logPath, writeErr := writeWorkflowArtifact(r.doc.Dir, step.Log, result.Log)
