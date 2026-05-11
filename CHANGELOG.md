@@ -6,6 +6,13 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+## [0.6.0](https://github.com/dingdayu/go-viya/compare/v0.5.0...v0.6.0) (2026-05-11)
+
+
+### Features
+
+* add workflow orchestration ([#13](https://github.com/dingdayu/go-viya/issues/13)) ([f9c9233](https://github.com/dingdayu/go-viya/commit/f9c923370ae80313996582367c65d2b9393b6cd1))
+
 ## [0.5.0](https://github.com/dingdayu/go-viya/compare/v0.4.0...v0.5.0) (2026-05-09)
 
 
