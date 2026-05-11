@@ -1131,6 +1131,9 @@ func workflowStringMap(node *yaml.Node, label string, field string) (map[string]
 			return nil, fmt.Errorf("%s.%s[%s] must be a valid SAS macro variable name", label, field, key)
 		}
 		valueNode := node.Content[i+1]
+		if valueNode.Kind != yaml.ScalarNode || valueNode.ShortTag() != "!!str" {
+			return nil, fmt.Errorf("%s.%s[%s] must be a string", label, field, key)
+		}
 		var value string
 		if err := valueNode.Decode(&value); err != nil {
 			return nil, fmt.Errorf("%s.%s[%s] must be a string", label, field, key)

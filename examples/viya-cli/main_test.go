@@ -745,6 +745,18 @@ steps:
 			want: "workflow step.variables[bad-name] must be a valid SAS macro variable name",
 		},
 		{
+			name: "step variable value",
+			content: `version: 1
+name: invalid-step-variable-value
+steps:
+  - name: prepare
+    code: '%put ok;'
+    variables:
+      FOO: 1
+`,
+			want: "workflow step.variables[FOO] must be a string",
+		},
+		{
 			name: "user variable name",
 			content: `version: 1
 name: invalid-user-variable
@@ -753,6 +765,16 @@ steps:
     code: '%put ok;'
 `,
 			want: "user.yaml.variables[bad.name] must be a valid SAS macro variable name",
+		},
+		{
+			name: "user variable value",
+			content: `version: 1
+name: invalid-user-variable-value
+steps:
+  - name: prepare
+    code: '%put ok;'
+`,
+			want: "user.yaml.variables[FOO] must be a string",
 		},
 	}
 
@@ -774,6 +796,15 @@ steps:
 				args = []string{"workflow", "--user-config", userConfigPath, "-o", "json", "run", "--file", workflowPath}
 				// validate path remains focused on project file validation; user config variables
 				// are exercised by the run path because they are emitted into wrapper code.
+			} else if tt.name == "user variable value" {
+				userConfigPath := filepath.Join(t.TempDir(), "user.yaml")
+				if err := os.WriteFile(userConfigPath, []byte(`variables:
+  FOO: 1
+`), 0o644); err != nil {
+					t.Fatalf("write user config: %v", err)
+				}
+				args = []string{"workflow", "--user-config", userConfigPath, "-o", "json", "run", "--file", workflowPath}
+				// user config variables are exercised by the run path because they are emitted into wrapper code.
 			}
 
 			stdout, _, err := executeCLI(args...)
@@ -782,6 +813,12 @@ steps:
 			}
 			if tt.name == "user variable name" {
 				if !strings.Contains(stdout, "user.yaml.variables[bad.name] must be a valid SAS macro variable name") {
+					t.Fatalf("stdout = %s, want workflow variable failure", stdout)
+				}
+				return
+			}
+			if tt.name == "user variable value" {
+				if !strings.Contains(stdout, "user.yaml.variables[FOO] must be a string") {
 					t.Fatalf("stdout = %s, want workflow variable failure", stdout)
 				}
 				return
