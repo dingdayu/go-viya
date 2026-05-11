@@ -152,6 +152,7 @@ Workflow files use a simple shape:
 - A nested array inside `steps` runs its child work items in parallel.
 - Each work item can define `name`, `file`/`work`/`path`, `code`, `log`, `listing`, and `variables`.
 - `file`, `work`, and `path` are resolved relative to the workflow file directory.
+- File-backed work items also receive `_SASPROGRAMFILE` and `_SASPROGRAMDIR` so SAS code can derive relative paths the same way the SAS VS Code extension does.
 - `log` and `listing` are output artifact paths relative to the workflow file directory.
 
 See `workflow.schema.json` and `workflow-user.schema.json` for the supported fields.

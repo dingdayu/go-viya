@@ -486,6 +486,9 @@ variables:
 			if body.Variables["WORKFLOW_STEP_PATH"] == "" || body.Variables["USER_LEVEL"] != "yes" {
 				t.Fatalf("variables = %#v, want workflow paths and user variables", body.Variables)
 			}
+			if body.Variables["_SASPROGRAMFILE"] == "" || body.Variables["_SASPROGRAMDIR"] == "" {
+				t.Fatalf("variables = %#v, want SAS program path variables", body.Variables)
+			}
 			w.WriteHeader(http.StatusCreated)
 			_, _ = w.Write([]byte(`{"id":"job-` + body.Name + `","sessionId":"session-1","state":"running"}`))
 		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-1/jobs/job-") && strings.HasSuffix(r.URL.Path, "/state"):

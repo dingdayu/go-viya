@@ -227,8 +227,9 @@ steps:
 
 Workflow runs expose path variables to SAS as macro variables and Compute job
 variables, including `WORKFLOW_FILE`, `WORKFLOW_DIR`, `WORKFLOW_STEP_NAME`,
-`WORKFLOW_STEP_FILE`, and `WORKFLOW_STEP_PATH`. This supports SAS code that
-computes paths relative to the project workflow.
+`WORKFLOW_STEP_FILE`, and `WORKFLOW_STEP_PATH`. File-backed work items also
+receive `_SASPROGRAMFILE` and `_SASPROGRAMDIR`, matching the SAS VS Code
+extension's path variables for relative file logic.
 
 ## Prompt Workflows
 

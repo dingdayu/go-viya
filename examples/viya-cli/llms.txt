@@ -23,6 +23,7 @@ Directory: examples/viya-cli
 - `contextId` and `contextName` can be defined in project workflow config or user workflow config. Project workflow values override user defaults.
 - Top-level `steps` run serially. A nested array inside `steps` runs its work items in parallel with a barrier before the next top-level step.
 - Each workflow run creates one Compute session. Each work item creates one Compute job in that session.
+- File-backed work items also inject `_SASPROGRAMFILE` and `_SASPROGRAMDIR` so SAS code can compute relative paths the same way as the SAS VS Code extension.
 
 ## Output contract
 

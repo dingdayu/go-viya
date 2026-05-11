@@ -5,8 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -486,6 +488,10 @@ func workflowVariables(doc workflowDocument, step workflowStep, resolvedFile str
 		"WORKFLOW_STEP_LOG":     step.Log,
 		"WORKFLOW_STEP_LISTING": step.Listing,
 	}
+	if resolvedFile != "" {
+		vars["_SASPROGRAMFILE"] = resolvedFile
+		vars["_SASPROGRAMDIR"] = filepath.Dir(resolvedFile)
+	}
 	for key, value := range doc.User.Variables {
 		vars[key] = value
 	}
@@ -496,40 +502,39 @@ func workflowVariables(doc workflowDocument, step workflowStep, resolvedFile str
 }
 
 func buildWorkflowJobCode(user workflowUserConfig, step workflowStep, fileContent string, doc workflowDocument, resolvedFile string) string {
-	var builder strings.Builder
-	writeWorkflowMacroVars(&builder, workflowVariables(doc, step, resolvedFile))
-	if pre := strings.TrimSpace(user.PreCode); pre != "" {
-		builder.WriteString(pre)
-		if !strings.HasSuffix(pre, "\n") {
-			builder.WriteString("\n")
-		}
-	}
-	if code := strings.TrimSpace(step.Code); code != "" {
-		builder.WriteString(code)
-		if !strings.HasSuffix(code, "\n") {
-			builder.WriteString("\n")
-		}
-	}
-	builder.WriteString(fileContent)
-	if !strings.HasSuffix(fileContent, "\n") {
-		builder.WriteString("\n")
-	}
-	if post := strings.TrimSpace(user.PostCode); post != "" {
-		builder.WriteString(post)
-		if !strings.HasSuffix(post, "\n") {
-			builder.WriteString("\n")
-		}
-	}
-	return builder.String()
+	return wrapWorkflowCode(user, step, fileContent, doc, resolvedFile)
 }
 
 func writeWorkflowMacroVars(builder *strings.Builder, vars map[string]any) {
-	for key, value := range vars {
+	keys := slices.Sorted(maps.Keys(vars))
+	for _, key := range keys {
+		value := vars[key]
 		builder.WriteString("%let ")
 		builder.WriteString(key)
 		builder.WriteString("=")
 		builder.WriteString(sasQuotedString(fmt.Sprint(value)))
 		builder.WriteString(";\n")
+	}
+}
+
+func wrapWorkflowCode(user workflowUserConfig, step workflowStep, fileContent string, doc workflowDocument, resolvedFile string) string {
+	var builder strings.Builder
+	writeWorkflowMacroVars(&builder, workflowVariables(doc, step, resolvedFile))
+	appendWorkflowSnippet(&builder, user.PreCode)
+	appendWorkflowSnippet(&builder, step.Code)
+	appendWorkflowSnippet(&builder, fileContent)
+	appendWorkflowSnippet(&builder, user.PostCode)
+	return builder.String()
+}
+
+func appendWorkflowSnippet(builder *strings.Builder, code string) {
+	code = strings.TrimSpace(code)
+	if code == "" {
+		return
+	}
+	builder.WriteString(code)
+	if !strings.HasSuffix(code, "\n") {
+		builder.WriteString("\n")
 	}
 }
 
