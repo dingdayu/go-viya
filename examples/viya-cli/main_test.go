@@ -582,6 +582,54 @@ preCode: '%put user context;'
 	}
 }
 
+func TestWorkflowRunFailsWhenComputeJobStateIsNotCompleted(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "program.sas"), []byte("data _null_; put 'fail'; run;"), 0o644); err != nil {
+		t.Fatalf("write program: %v", err)
+	}
+	workflowPath := filepath.Join(dir, "workflow.yaml")
+	if err := os.WriteFile(workflowPath, []byte(`version: 1
+name: failed-state
+steps:
+  - name: only-step
+    file: program.sas
+`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/compute/contexts":
+			_, _ = w.Write([]byte(`{"count":1,"items":[{"id":"ctx-1","name":"SAS Job Execution compute context"}]}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/compute/contexts/ctx-1/sessions":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"id":"session-1","name":"failed-state","state":"idle"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/compute/sessions/session-1/jobs":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"id":"job-1","sessionId":"session-1","state":"running"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/compute/sessions/session-1/jobs/job-1/state":
+			w.Header().Set("Content-Type", "text/plain")
+			_, _ = w.Write([]byte("failed"))
+		case r.Method == http.MethodGet && r.URL.Path == "/compute/sessions/session-1/jobs/job-1":
+			_, _ = w.Write([]byte(`{"id":"job-1","sessionId":"session-1","state":"failed","jobConditionCode":5}`))
+		case r.Method == http.MethodDelete && r.URL.Path == "/compute/sessions/session-1":
+			w.WriteHeader(http.StatusAccepted)
+		default:
+			t.Fatalf("unexpected request %s %s", r.Method, r.RequestURI)
+		}
+	}))
+	defer server.Close()
+
+	stdout, _, err := executeCLI("workflow", "--base-url", server.URL, "--access-token", "test-token", "-o", "json", "run", "--file", workflowPath)
+	if err == nil {
+		t.Fatalf("executeCLI() error = nil, stdout = %s", stdout)
+	}
+	if !strings.Contains(stdout, `"ok": false`) || !strings.Contains(stdout, `compute job finished with state \"failed\"`) {
+		t.Fatalf("stdout = %s, want failed state error", stdout)
+	}
+}
+
 func executeCLI(args ...string) (stdout string, stderr string, err error) {
 	return executeCLIWithStdin("", args...)
 }
