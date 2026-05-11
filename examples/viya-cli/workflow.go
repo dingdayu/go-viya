@@ -405,7 +405,7 @@ func (r workflowRunner) runParallelGroup(ctx context.Context, steps []workflowSt
 
 func (r workflowRunner) runStep(ctx context.Context, step workflowStep) (workflowNodeResult, error) {
 	resolvedFile := ""
-	content := step.Code
+	content := ""
 	if step.File != "" {
 		var err error
 		resolvedFile, err = resolveWorkflowPath(r.doc.Dir, step.File)
@@ -419,7 +419,7 @@ func (r workflowRunner) runStep(ctx context.Context, step workflowStep) (workflo
 		content = string(fileContent)
 	}
 
-	jobCode := buildWorkflowJobCode(r.userConfig, step, string(content), r.doc, resolvedFile)
+	jobCode := buildWorkflowJobCode(r.userConfig, step, content, r.doc, resolvedFile)
 	jobReq := viya.CreateComputeJobRequest{
 		Version:   3,
 		Name:      stepDisplayName(step, 0),
