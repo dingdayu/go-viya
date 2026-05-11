@@ -225,7 +225,7 @@ func runWorkflow(ioStreams cliIO, opts workflowOptions, file string, overrides w
 
 	maxParallel := opts.maxParallel
 	if maxParallel <= 0 {
-		maxParallel = defaultWorkflowMaxParallel
+		return workflowRunResult{Error: "--max-parallel must be at least 1"}, writeWorkflowFailure(ioStreams.stdout, opts.cfg.Output, workflowRunResult{Error: "--max-parallel must be at least 1"})
 	}
 	if doc.Config.MaxParallel > 0 && !overrides.maxParallel {
 		maxParallel = doc.Config.MaxParallel

@@ -674,6 +674,32 @@ steps:
 	}
 }
 
+func TestWorkflowRunRejectsNonPositiveMaxParallelFlag(t *testing.T) {
+	tests := []string{"0", "-1"}
+	for _, value := range tests {
+		t.Run(value, func(t *testing.T) {
+			dir := t.TempDir()
+			workflowPath := filepath.Join(dir, "workflow.yaml")
+			if err := os.WriteFile(workflowPath, []byte(`version: 1
+name: bad-max-parallel
+steps:
+  - name: prepare
+    code: '%put ok;'
+`), 0o644); err != nil {
+				t.Fatalf("write workflow: %v", err)
+			}
+
+			stdout, _, err := executeCLI("workflow", "--base-url", "https://example.invalid", "--access-token", "test-token", "-o", "json", "run", "--file", workflowPath, "--max-parallel", value)
+			if err == nil {
+				t.Fatal("executeCLI() error = nil, want exit error")
+			}
+			if !strings.Contains(stdout, "--max-parallel must be at least 1") {
+				t.Fatalf("stdout = %s, want max-parallel validation failure", stdout)
+			}
+		})
+	}
+}
+
 func TestWorkflowRunRejectsMalformedUserConfigStringScalars(t *testing.T) {
 	dir := t.TempDir()
 	workflowPath := filepath.Join(dir, "workflow.yaml")
