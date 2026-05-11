@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/dingdayu/go-viya"
 	"github.com/spf13/cobra"
@@ -423,7 +424,10 @@ func (r workflowRunner) runStep(ctx context.Context, step workflowStep) (workflo
 		content = string(fileContent)
 	}
 
-	jobCode := buildWorkflowJobCode(r.userConfig, step, content, r.doc, resolvedFile)
+	jobCode, err := buildWorkflowJobCode(r.userConfig, step, content, r.doc, resolvedFile)
+	if err != nil {
+		return workflowNodeResult{Kind: "step", Name: stepDisplayName(step, 0), File: step.File, Path: resolvedFile, Error: err.Error()}, err
+	}
 	jobReq := viya.CreateComputeJobRequest{
 		Version:   3,
 		Name:      stepDisplayName(step, 0),
@@ -510,13 +514,16 @@ func workflowVariables(doc workflowDocument, step workflowStep, resolvedFile str
 	return vars
 }
 
-func buildWorkflowJobCode(user workflowUserConfig, step workflowStep, fileContent string, doc workflowDocument, resolvedFile string) string {
+func buildWorkflowJobCode(user workflowUserConfig, step workflowStep, fileContent string, doc workflowDocument, resolvedFile string) (string, error) {
 	return wrapWorkflowCode(user, step, fileContent, doc, resolvedFile)
 }
 
-func writeWorkflowMacroVars(builder *strings.Builder, vars map[string]any) {
+func writeWorkflowMacroVars(builder *strings.Builder, vars map[string]any) error {
 	keys := slices.Sorted(maps.Keys(vars))
 	for _, key := range keys {
+		if !isValidSASMacroName(key) {
+			return fmt.Errorf("workflow variable %q must be a valid SAS macro variable name", key)
+		}
 		value := vars[key]
 		builder.WriteString("%let ")
 		builder.WriteString(key)
@@ -524,16 +531,19 @@ func writeWorkflowMacroVars(builder *strings.Builder, vars map[string]any) {
 		builder.WriteString(sasQuotedString(fmt.Sprint(value)))
 		builder.WriteString(";\n")
 	}
+	return nil
 }
 
-func wrapWorkflowCode(user workflowUserConfig, step workflowStep, fileContent string, doc workflowDocument, resolvedFile string) string {
+func wrapWorkflowCode(user workflowUserConfig, step workflowStep, fileContent string, doc workflowDocument, resolvedFile string) (string, error) {
 	var builder strings.Builder
-	writeWorkflowMacroVars(&builder, workflowVariables(doc, step, resolvedFile))
+	if err := writeWorkflowMacroVars(&builder, workflowVariables(doc, step, resolvedFile)); err != nil {
+		return "", err
+	}
 	appendWorkflowSnippet(&builder, user.PreCode)
 	appendWorkflowSnippet(&builder, step.Code)
 	appendWorkflowSnippet(&builder, fileContent)
 	appendWorkflowSnippet(&builder, user.PostCode)
-	return builder.String()
+	return builder.String(), nil
 }
 
 func appendWorkflowSnippet(builder *strings.Builder, code string) {
@@ -1117,6 +1127,9 @@ func workflowStringMap(node *yaml.Node, label string, field string) (map[string]
 	result := make(map[string]string, len(node.Content)/2)
 	for i := 0; i < len(node.Content); i += 2 {
 		key := node.Content[i].Value
+		if !isValidSASMacroName(key) {
+			return nil, fmt.Errorf("%s.%s[%s] must be a valid SAS macro variable name", label, field, key)
+		}
 		valueNode := node.Content[i+1]
 		var value string
 		if err := valueNode.Decode(&value); err != nil {
@@ -1130,6 +1143,30 @@ func workflowStringMap(node *yaml.Node, label string, field string) (map[string]
 		return nil, nil
 	}
 	return result, nil
+}
+
+func isValidSASMacroName(name string) bool {
+	if len(name) == 0 || len(name) > 32 {
+		return false
+	}
+	if len(name) >= 3 && strings.EqualFold(name[:3], "SYS") {
+		return false
+	}
+	for i, r := range name {
+		if r > unicode.MaxASCII {
+			return false
+		}
+		if i == 0 {
+			if !(r == '_' || ('A' <= r && r <= 'Z') || ('a' <= r && r <= 'z')) {
+				return false
+			}
+			continue
+		}
+		if !(r == '_' || ('A' <= r && r <= 'Z') || ('a' <= r && r <= 'z') || ('0' <= r && r <= '9')) {
+			return false
+		}
+	}
+	return true
 }
 
 func yamlKindName(kind yaml.Kind) string {

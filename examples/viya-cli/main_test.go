@@ -726,6 +726,73 @@ steps:
 	}
 }
 
+func TestWorkflowValidateRejectsInvalidVariableNames(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{
+			name: "step variable name",
+			content: `version: 1
+name: invalid-step-variable
+steps:
+  - name: prepare
+    code: '%put ok;'
+    variables:
+      bad-name: value
+`,
+			want: "workflow step.variables[bad-name] must be a valid SAS macro variable name",
+		},
+		{
+			name: "user variable name",
+			content: `version: 1
+name: invalid-user-variable
+steps:
+  - name: prepare
+    code: '%put ok;'
+`,
+			want: "user.yaml.variables[bad.name] must be a valid SAS macro variable name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			workflowPath := filepath.Join(t.TempDir(), "workflow.yaml")
+			if err := os.WriteFile(workflowPath, []byte(tt.content), 0o644); err != nil {
+				t.Fatalf("write workflow: %v", err)
+			}
+
+			args := []string{"workflow", "-o", "json", "validate", "--file", workflowPath}
+			if tt.name == "user variable name" {
+				userConfigPath := filepath.Join(t.TempDir(), "user.yaml")
+				if err := os.WriteFile(userConfigPath, []byte(`variables:
+  bad.name: value
+`), 0o644); err != nil {
+					t.Fatalf("write user config: %v", err)
+				}
+				args = []string{"workflow", "--user-config", userConfigPath, "-o", "json", "run", "--file", workflowPath}
+				// validate path remains focused on project file validation; user config variables
+				// are exercised by the run path because they are emitted into wrapper code.
+			}
+
+			stdout, _, err := executeCLI(args...)
+			if err == nil {
+				t.Fatal("executeCLI() error = nil, want exit error")
+			}
+			if tt.name == "user variable name" {
+				if !strings.Contains(stdout, tt.want) {
+					t.Fatalf("stdout = %s, want workflow variable failure", stdout)
+				}
+				return
+			}
+			if !strings.Contains(stdout, tt.want) {
+				t.Fatalf("stdout = %s, want %q", stdout, tt.want)
+			}
+		})
+	}
+}
+
 func TestWorkflowRunUsesSingleComputeSessionForMultipleJobs(t *testing.T) {
 	dir := t.TempDir()
 	for name, content := range map[string]string{
