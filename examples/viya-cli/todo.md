@@ -23,6 +23,8 @@ Goals and constraints for remaining sas-mcp-server replacement work.
   - score input data through a MAS module step
 - Prompt workflows:
   - encode log debugging, dataset exploration, data quality, statistical analysis, code optimization, macro building, and report generation as skill guidance or CLI-friendly templates without reintroducing Python runtime dependencies
+ - Workflow orchestration:
+   - add a Compute-based `viya-cli workflow` command with serial/parallel nested arrays, user-level pre/post/autoexec support, schema docs, and agent-friendly examples
 
 ## Constraints
 
@@ -40,4 +42,5 @@ Goals and constraints for remaining sas-mcp-server replacement work.
 - Upload CSV data into CAS tables and promote CAS tables through `viya-cli data ...`.
 - List, upload, and download Viya Files service files through `viya-cli files ...`.
 - Submit, list, inspect, cancel, and retrieve logs for Job Execution jobs through `viya-cli jobs ...`.
+- Validate and run Compute-based workflow plans through `viya-cli workflow ...`.
 - Provide an agent skill guide that uses `viya-cli` instead of an MCP service.

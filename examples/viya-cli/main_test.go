@@ -7,7 +7,10 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -371,6 +374,208 @@ func TestFilesCommandMissingFlagWritesFailureJSON(t *testing.T) {
 	}
 	if !strings.Contains(stdout, `"ok": false`) || !strings.Contains(stdout, "--id is required") {
 		t.Fatalf("stdout = %s, want missing id failure", stdout)
+	}
+}
+
+func TestWorkflowValidateAcceptsNestedArrayPlan(t *testing.T) {
+	dir := t.TempDir()
+	workflowPath := filepath.Join(dir, "workflow.yaml")
+	if err := os.WriteFile(workflowPath, []byte(`version: 1
+name: demo
+steps:
+  - name: prepare
+    file: prepare.sas
+  - - name: branch-a
+      file: branch-a.sas
+    - name: branch-b
+      file: branch-b.sas
+`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	stdout, _, err := executeCLI("workflow", "-o", "json", "validate", "--file", workflowPath)
+	if err != nil {
+		t.Fatalf("executeCLI() error = %v, stdout = %s", err, stdout)
+	}
+	if !strings.Contains(stdout, `"ok": true`) || !strings.Contains(stdout, "demo") {
+		t.Fatalf("stdout = %s, want valid workflow JSON", stdout)
+	}
+}
+
+func TestWorkflowRunUsesSingleComputeSessionForMultipleJobs(t *testing.T) {
+	dir := t.TempDir()
+	for name, content := range map[string]string{
+		"prepare.sas":  "data _null_; put 'prepare'; run;",
+		"branch-a.sas": "data _null_; put 'a'; run;",
+		"branch-b.sas": "data _null_; put 'b'; run;",
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+	workflowPath := filepath.Join(dir, "workflow.json")
+	if err := os.WriteFile(workflowPath, []byte(`{
+  "version": 1,
+  "name": "demo-workflow",
+  "maxParallel": 2,
+  "contextId": "ctx-1",
+  "includeOutput": true,
+  "steps": [
+    {"name": "prepare", "file": "prepare.sas", "log": "logs/prepare.log"},
+    [
+      {"name": "branch-a", "file": "branch-a.sas"},
+      {"name": "branch-b", "file": "branch-b.sas"}
+    ]
+  ]
+}`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+	userConfigPath := filepath.Join(dir, "user.yaml")
+	if err := os.WriteFile(userConfigPath, []byte(`autoexec: '%put autoexec;'
+preCode: '%put pre;'
+postCode: '%put post;'
+variables:
+  USER_LEVEL: yes
+`), 0o644); err != nil {
+		t.Fatalf("write user config: %v", err)
+	}
+
+	var mu sync.Mutex
+	createdSessions := 0
+	createdJobs := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/compute/contexts/ctx-1":
+			_, _ = w.Write([]byte(`{"id":"ctx-1","name":"ctx one"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/compute/contexts/ctx-1/sessions":
+			createdSessions++
+			var body struct {
+				Name        string `json:"name"`
+				Environment struct {
+					InitCode []string `json:"initCode"`
+				} `json:"environment"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode session request: %v", err)
+			}
+			if got, want := body.Name, "demo-workflow"; got != want {
+				t.Fatalf("session name = %q, want %q", got, want)
+			}
+			if len(body.Environment.InitCode) == 0 || !strings.Contains(body.Environment.InitCode[0], "autoexec") {
+				t.Fatalf("initCode = %#v, want autoexec", body.Environment.InitCode)
+			}
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"id":"session-1","name":"demo-workflow","state":"idle"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/compute/sessions/session-1/jobs":
+			createdJobs++
+			var body struct {
+				Name      string         `json:"name"`
+				Code      []string       `json:"code"`
+				Variables map[string]any `json:"variables"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode job request: %v", err)
+			}
+			joined := strings.Join(body.Code, "\n")
+			if !strings.Contains(joined, "%put pre;") || !strings.Contains(joined, "%put post;") {
+				t.Fatalf("job code = %q, want pre/post code", joined)
+			}
+			if body.Variables["WORKFLOW_STEP_PATH"] == "" || body.Variables["USER_LEVEL"] != "yes" {
+				t.Fatalf("variables = %#v, want workflow paths and user variables", body.Variables)
+			}
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"id":"job-` + body.Name + `","sessionId":"session-1","state":"running"}`))
+		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-1/jobs/job-") && strings.HasSuffix(r.URL.Path, "/state"):
+			w.Header().Set("Content-Type", "text/plain")
+			_, _ = w.Write([]byte("completed"))
+		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-1/jobs/job-") && !strings.HasSuffix(r.URL.Path, "/state") && !strings.HasSuffix(r.URL.Path, "/log") && !strings.HasSuffix(r.URL.Path, "/listing"):
+			_, _ = w.Write([]byte(`{"id":"job-info","sessionId":"session-1","state":"completed","jobConditionCode":0}`))
+		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/log"):
+			w.Header().Set("Content-Type", "text/plain")
+			_, _ = w.Write([]byte("workflow log"))
+		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/listing"):
+			w.Header().Set("Content-Type", "text/plain")
+			_, _ = w.Write([]byte("workflow listing"))
+		case r.Method == http.MethodDelete && r.URL.Path == "/compute/sessions/session-1":
+			w.WriteHeader(http.StatusAccepted)
+		default:
+			t.Fatalf("unexpected request %s %s", r.Method, r.RequestURI)
+		}
+	}))
+	defer server.Close()
+
+	stdout, _, err := executeCLI("workflow", "--base-url", server.URL, "--access-token", "test-token", "--user-config", userConfigPath, "-o", "json", "run", "--file", workflowPath)
+	if err != nil {
+		t.Fatalf("executeCLI() error = %v, stdout = %s", err, stdout)
+	}
+	if createdSessions != 1 {
+		t.Fatalf("createdSessions = %d, want 1", createdSessions)
+	}
+	if createdJobs != 3 {
+		t.Fatalf("createdJobs = %d, want 3", createdJobs)
+	}
+	if !strings.Contains(stdout, `"ok": true`) || !strings.Contains(stdout, `"kind": "parallel"`) {
+		t.Fatalf("stdout = %s, want workflow result JSON", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "logs", "prepare.log")); err != nil {
+		t.Fatalf("expected log artifact: %v", err)
+	}
+}
+
+func TestWorkflowRunUsesContextFromUserConfig(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "program.sas"), []byte("data _null_; put 'hello'; run;"), 0o644); err != nil {
+		t.Fatalf("write program: %v", err)
+	}
+	workflowPath := filepath.Join(dir, "workflow.yaml")
+	if err := os.WriteFile(workflowPath, []byte(`version: 1
+name: user-context
+steps:
+  - name: program
+    file: program.sas
+`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+	userConfigPath := filepath.Join(dir, "user.yaml")
+	if err := os.WriteFile(userConfigPath, []byte(`contextName: user context
+preCode: '%put user context;'
+`), 0o644); err != nil {
+		t.Fatalf("write user config: %v", err)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/compute/contexts":
+			_, _ = w.Write([]byte(`{"count":1,"items":[{"id":"ctx-user","name":"user context"}]}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/compute/contexts/ctx-user/sessions":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"id":"session-user","name":"user-context","state":"idle"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/compute/sessions/session-user/jobs":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"id":"job-user","sessionId":"session-user","state":"running"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/compute/sessions/session-user/jobs/job-user/state":
+			w.Header().Set("Content-Type", "text/plain")
+			_, _ = w.Write([]byte("completed"))
+		case r.Method == http.MethodGet && r.URL.Path == "/compute/sessions/session-user/jobs/job-user":
+			_, _ = w.Write([]byte(`{"id":"job-user","sessionId":"session-user","state":"completed","jobConditionCode":0}`))
+		case r.Method == http.MethodDelete && r.URL.Path == "/compute/sessions/session-user":
+			w.WriteHeader(http.StatusAccepted)
+		default:
+			t.Fatalf("unexpected request %s %s", r.Method, r.RequestURI)
+		}
+	}))
+	defer server.Close()
+
+	stdout, _, err := executeCLI("workflow", "--base-url", server.URL, "--access-token", "test-token", "--user-config", userConfigPath, "-o", "json", "run", "--file", workflowPath)
+	if err != nil {
+		t.Fatalf("executeCLI() error = %v, stdout = %s", err, stdout)
+	}
+	if !strings.Contains(stdout, `"contextId": "ctx-user"`) || !strings.Contains(stdout, `"contextName": "user context"`) {
+		t.Fatalf("stdout = %s, want context from user config", stdout)
 	}
 }
 

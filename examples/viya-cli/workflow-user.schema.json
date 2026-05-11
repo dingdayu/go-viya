@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/dingdayu/go-viya/main/examples/viya-cli/workflow-user.schema.json",
+  "title": "viya-cli workflow user config",
+  "description": "User-level workflow defaults for viya-cli. Store this under ~/.viya-cli/workflow.yaml or pass --user-config. Do not include secrets.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "contextId": {
+      "type": "string",
+      "description": "User-level default Compute context ID. Project workflow contextId overrides this value."
+    },
+    "contextName": {
+      "type": "string",
+      "description": "User-level default Compute context name. Project workflow contextName overrides this value."
+    },
+    "autoexec": {
+      "type": "string",
+      "description": "SAS code sent as Compute session initCode."
+    },
+    "preCode": {
+      "type": "string",
+      "description": "SAS code prepended before each work item's code."
+    },
+    "postCode": {
+      "type": "string",
+      "description": "SAS code appended after each work item's code."
+    },
+    "variables": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Non-secret variables available as Compute variables and SAS macro variables."
+    }
+  }
+}

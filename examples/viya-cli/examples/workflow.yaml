@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=../workflow.schema.json
+version: 1
+name: daily-quality-check
+maxParallel: 2
+defaults:
+  contextName: SAS Job Execution compute context
+  includeOutput: true
+steps:
+  - name: prepare-inputs
+    file: sas/prepare.sas
+    log: logs/prepare.log
+  - - name: profile-customers
+      work: sas/profile_customers.sas
+      log: logs/profile-customers.log
+    - name: profile-orders
+      work: sas/profile_orders.sas
+      log: logs/profile-orders.log
+  - name: publish-summary
+    file: sas/publish_summary.sas
+    listing: output/summary.lst
