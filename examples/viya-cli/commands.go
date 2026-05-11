@@ -31,6 +31,7 @@ It reads configuration from flags, environment variables, and
 	cmd.AddCommand(newDataCommand(ioStreams))
 	cmd.AddCommand(newFilesCommand(ioStreams))
 	cmd.AddCommand(newJobsCommand(ioStreams))
+	cmd.AddCommand(newWorkflowCommand(ioStreams))
 	return cmd
 }
 

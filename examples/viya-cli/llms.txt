@@ -1,0 +1,38 @@
+viya-cli
+
+Repository: https://github.com/dingdayu/go-viya
+Directory: examples/viya-cli
+
+## Summary
+
+`viya-cli` is the Go-only agent-facing CLI example for SAS Viya workflows. It can run SAS code through Compute, discover CAS assets, use Viya Files, submit Job Execution jobs, and run project workflow plans through one Compute session with one Compute job per SAS work item.
+
+## Start here
+
+- User docs: `README.md`
+- Agent skill: `SKILLS.md`
+- Workflow schema: `workflow.schema.json`
+- User workflow schema: `workflow-user.schema.json`
+- Example workflow files: `examples/workflow.yaml` and `examples/workflow.json`
+
+## Workflow command
+
+- Validate a plan: `viya-cli workflow validate --file workflow.yaml -o json`
+- Run a plan: `viya-cli workflow run --file workflow.yaml -o json`
+- User config: `~/.viya-cli/workflow.yaml`, `~/.viya-cli/workflow.json`, or `--user-config path`
+- `contextId` and `contextName` can be defined in project workflow config or user workflow config. Project workflow values override user defaults.
+- Top-level `steps` run serially. A nested array inside `steps` runs its work items in parallel with a barrier before the next top-level step.
+- Each workflow run creates one Compute session. Each work item creates one Compute job in that session.
+- File-backed work items also inject `_SASPROGRAMFILE` and `_SASPROGRAMDIR` so SAS code can compute relative paths the same way as the SAS VS Code extension.
+
+## Output contract
+
+- Text is for humans.
+- Use `-o json` for scripts and agents.
+- Workflow JSON includes `ok`, `name`, `contextId`, `contextName`, `sessionId`, `steps`, and `error` on failure.
+
+## Safety
+
+- Do not store credentials, tokens, passwords, tenant URLs, or customer data in workflow files, schemas, docs, examples, or generated SAS.
+- Keep project workflow files non-secret. Use them for DAG shape, SAS file paths, output artifact paths, context defaults, and non-secret variables only.
+- User workflow config is for user-level `contextId`/`contextName`, `autoexec`, `preCode`, `postCode`, and non-secret variables. It is additive and should not override project workflow logic.

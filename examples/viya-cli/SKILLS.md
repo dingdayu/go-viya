@@ -1,13 +1,14 @@
 ---
 name: sas-viya
-description: Use this skill when you need to execute SAS code, discover or manage CAS data, use Viya files, or submit Job Execution jobs on SAS Viya through the Go viya-cli example. It replaces SAS MCP server style workflows with direct CLI calls and supports text or JSON output.
+description: Use this skill when you need to execute SAS code, run Compute-based workflow plans, discover or manage CAS data, use Viya files, or submit Job Execution jobs on SAS Viya through the Go viya-cli example. It replaces SAS MCP server style workflows with direct CLI calls and supports text or JSON output.
 ---
 
 # viya-cli Agent Skill
 
-Use `viya-cli` when an agent needs to execute SAS code, discover or manage CAS
-data assets, exchange files, or submit asynchronous jobs on SAS Viya. It is a
-Go-only CLI; do not start a Python MCP server for this workflow.
+Use `viya-cli` when an agent needs to execute SAS code, run project workflow
+plans, discover or manage CAS data assets, exchange files, or submit
+asynchronous jobs on SAS Viya. It is a Go-only CLI; do not start a Python MCP
+server for this workflow.
 
 ## Setup
 
@@ -19,6 +20,10 @@ go install ./examples/viya-cli
 
 Configuration can come from flags, environment variables, or
 `~/.sas/config.json` and `~/.sas/credentials.json`.
+
+Workflow user config can come from `~/.viya-cli/workflow.yaml`,
+`~/.viya-cli/workflow.json`, or `--user-config path`. Use it only for non-secret
+`contextId`, `contextName`, `autoexec`, `preCode`, `postCode`, and variables.
 
 Common environment variables:
 
@@ -173,6 +178,59 @@ Prefer `viya-cli run` for immediate Compute execution with listing/log output.
 Use `viya-cli jobs submit` when the user asks for asynchronous Job Execution
 service behavior.
 
+## Workflow Plans
+
+Use `viya-cli workflow` when the user has multiple SAS files that should run as
+one Compute-based task. A workflow run creates one Compute session, then creates
+one Compute job per work item. This avoids the batch cold-start pattern where
+each submission can create a fresh runtime pod.
+
+Validate a workflow before running it:
+
+```bash
+viya-cli workflow validate --file workflow.yaml -o json
+```
+
+Run a workflow:
+
+```bash
+viya-cli workflow run --file workflow.yaml -o json
+```
+
+Workflow grammar:
+
+- Top-level `steps` array is serial.
+- A nested array inside `steps` is a parallel group.
+- A work item can define `name`, `file`/`work`/`path`, `code`, `log`, `listing`, and `variables`.
+- Relative SAS and artifact paths resolve from the workflow file directory.
+- `workflow.schema.json` and `workflow-user.schema.json` document the editable formats.
+- `contextId` and `contextName` can be set in either project workflow config or user workflow config. Project workflow values override user defaults.
+
+Example:
+
+```yaml
+version: 1
+name: quality-check
+defaults:
+  contextName: SAS Job Execution compute context
+  includeOutput: true
+steps:
+  - name: prepare
+    file: sas/prepare.sas
+  - - name: profile-customers
+      work: sas/profile_customers.sas
+    - name: profile-orders
+      work: sas/profile_orders.sas
+  - name: publish
+    file: sas/publish.sas
+```
+
+Workflow runs expose path variables to SAS as macro variables and Compute job
+variables, including `WORKFLOW_FILE`, `WORKFLOW_DIR`, `WORKFLOW_STEP_NAME`,
+`WORKFLOW_STEP_FILE`, and `WORKFLOW_STEP_PATH`. File-backed work items also
+receive `_SASPROGRAMFILE` and `_SASPROGRAMDIR`, matching the SAS VS Code
+extension's path variables for relative file logic.
+
 ## Prompt Workflows
 
 Use these workflows directly in the conversation. Generate SAS code or analysis
@@ -195,6 +253,7 @@ credentials in generated SAS.
 
 - Never include credentials in generated SAS code or logs.
 - Never print credentials, tokens, passwords, or customer data unless the user explicitly provided that exact public-safe output.
+- Never put credentials, tokens, passwords, tenant URLs, or customer data in workflow files or workflow user config.
 - Use `-timeout` for long-running tasks.
 - Use `-context-name` or `-context-id` when the deployment has multiple Compute contexts.
 - Use `-o json` before parsing command output in scripts, except when intentionally downloading raw file content or raw job logs.

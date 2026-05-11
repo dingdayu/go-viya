@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=../workflow-user.schema.json
+contextName: SAS Job Execution compute context
+autoexec: |
+  options fullstimer;
+preCode: |
+  %put NOTE: Running &WORKFLOW_STEP_NAME from &WORKFLOW_STEP_PATH;
+postCode: |
+  %put NOTE: Finished &WORKFLOW_STEP_NAME;
+variables:
+  PROJECT_ROOT: /path/to/project

@@ -1,17 +1,24 @@
 # viya-cli
 
 `viya-cli` is a small CLI example for agent frameworks that need to execute SAS
-code on SAS Viya, discover and manage CAS data assets, use Viya files, and
-submit asynchronous Job Execution jobs.
+code on SAS Viya, discover and manage CAS data assets, use Viya files, submit
+asynchronous Job Execution jobs, and orchestrate Compute-based workflow plans.
 
 It reads configuration from flags, environment variables, and local SAS CLI-style
 files:
 
 - `~/.sas/config.json`
 - `~/.sas/credentials.json`
+- `~/.viya-cli/workflow.yaml` or `~/.viya-cli/workflow.json` for user-level workflow defaults
 
 The parser accepts both simple top-level keys and common profile containers such
 as `profiles`, `contexts`, and `credentials`.
+
+Project workflow files are separate from user workflow config:
+
+- Project workflow files describe one run, its DAG shape, Compute context defaults, file paths, and output artifacts.
+- User workflow config provides user-level Compute context defaults, `autoexec`, `preCode`, `postCode`, and non-secret variables.
+- Project workflow `contextId`/`contextName` overrides user workflow context defaults for that run.
 
 ## Install
 
@@ -53,6 +60,9 @@ Supported configuration inputs:
 
 The equivalent values can also be passed with flags such as `-base-url`,
 `-context-id`, `-context-name`, `-username`, `-password`, and `-access-token`.
+
+Workflow command flags accept the same connection settings plus `--max-parallel`,
+`--keep-session`, `--include-output`, and `--user-config`.
 
 ## Usage
 
@@ -128,6 +138,25 @@ viya-cli jobs log --id job-id
 viya-cli jobs cancel --id job-id
 ```
 
+Validate and run workflow plans:
+
+```bash
+viya-cli workflow validate --file ./examples/workflow.yaml
+viya-cli workflow run --file ./examples/workflow.yaml
+viya-cli workflow run --file ./examples/workflow.json -o json
+```
+
+Workflow files use a simple shape:
+
+- `steps` at the top level run in serial order.
+- A nested array inside `steps` runs its child work items in parallel.
+- Each work item can define `name`, `file`/`work`/`path`, `code`, `log`, `listing`, and `variables`.
+- `file`, `work`, and `path` are resolved relative to the workflow file directory.
+- File-backed work items also receive `_SASPROGRAMFILE` and `_SASPROGRAMDIR` so SAS code can derive relative paths the same way the SAS VS Code extension does.
+- `log` and `listing` are output artifact paths relative to the workflow file directory.
+
+See `workflow.schema.json` and `workflow-user.schema.json` for the supported fields.
+
 ## Agent Integration
 
 Agents should treat this CLI as a tool with one primary synchronous execution
@@ -148,7 +177,9 @@ code through stdin. Use `-o json` for machine parsing, then inspect:
 - `error`
 
 Use `viya-cli jobs submit` when the user explicitly wants asynchronous Job
-Execution service behavior instead of a Compute session run.
+Execution service behavior instead of a Compute session run. Use `viya-cli
+workflow run` when the user wants a repeatable project workflow with one Compute
+session and multiple Compute jobs.
 
 The CLI intentionally does not print secrets and is designed to be called from
 modern agent frameworks, shell tools, or MCP-style wrappers.

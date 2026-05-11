@@ -7,8 +7,12 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestCASServersCommandWritesJSON(t *testing.T) {
@@ -53,6 +57,101 @@ func TestCASServersCommandWritesJSON(t *testing.T) {
 	}
 	if got, want := body.Data.Items[0].Name, "cas-shared-default"; got != want {
 		t.Fatalf("name = %q, want %q", got, want)
+	}
+}
+
+func TestResolveWorkflowContextPrefersCLIOverrides(t *testing.T) {
+	doc := workflowDocument{
+		Config: workflowProjectConfig{
+			Defaults: workflowProjectDefaults{
+				ContextID:   "workflow-id",
+				ContextName: "workflow-name",
+			},
+		},
+		User: workflowUserConfig{
+			ContextID:   "user-id",
+			ContextName: "user-name",
+		},
+	}
+	cfg := cliConfig{
+		ContextID:   "cli-id",
+		ContextName: "cli-name",
+	}
+
+	contextID, contextName, err := resolveWorkflowContext(t.Context(), nil, cfg, doc, workflowFlagOverrides{contextID: true, contextName: true})
+	if err != nil {
+		t.Fatalf("resolveWorkflowContext() error = %v", err)
+	}
+	if got, want := contextID, "cli-id"; got != want {
+		t.Fatalf("contextID = %q, want %q", got, want)
+	}
+	if got, want := contextName, "cli-name"; got != want {
+		t.Fatalf("contextName = %q, want %q", got, want)
+	}
+}
+
+func TestResolveWorkflowContextDoesNotUseConfiguredDefaultsAsCLIOverrides(t *testing.T) {
+	doc := workflowDocument{
+		Config: workflowProjectConfig{
+			Defaults: workflowProjectDefaults{
+				ContextID:   "workflow-id",
+				ContextName: "workflow-name",
+			},
+		},
+		User: workflowUserConfig{
+			ContextID:   "user-id",
+			ContextName: "user-name",
+		},
+	}
+	// cfg values simulate ambient config loaded from env/profile, not explicit CLI flags.
+	cfg := cliConfig{ContextID: "env-id", ContextName: "env-name"}
+
+	contextID, contextName, err := resolveWorkflowContext(t.Context(), nil, cfg, doc, workflowFlagOverrides{})
+	if err != nil {
+		t.Fatalf("resolveWorkflowContext() error = %v", err)
+	}
+	if got, want := contextID, "workflow-id"; got != want {
+		t.Fatalf("contextID = %q, want %q", got, want)
+	}
+	if got, want := contextName, "workflow-name"; got != want {
+		t.Fatalf("contextName = %q, want %q", got, want)
+	}
+}
+
+func TestResolveWorkflowContextUsesNameFromChosenContextID(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if got, want := r.Method, http.MethodGet; got != want {
+			t.Fatalf("method = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Path, "/compute/contexts/workflow-id"; got != want {
+			t.Fatalf("path = %q, want %q", got, want)
+		}
+		_, _ = w.Write([]byte(`{"id":"workflow-id","name":"workflow context","launchType":"service","version":1}`))
+	}))
+	defer server.Close()
+
+	client, ctx, cancel, cfg, err := newConfiguredClient(cliConfig{BaseURL: server.URL, AccessToken: "test-token", Timeout: time.Second})
+	if err != nil {
+		t.Fatalf("newConfiguredClient() error = %v", err)
+	}
+	defer cancel()
+	doc := workflowDocument{
+		Config: workflowProjectConfig{
+			Defaults: workflowProjectDefaults{ContextID: "workflow-id"},
+		},
+		User: workflowUserConfig{ContextName: "user context"},
+	}
+
+	contextID, contextName, err := resolveWorkflowContext(ctx, client, cfg, doc, workflowFlagOverrides{})
+	if err != nil {
+		t.Fatalf("resolveWorkflowContext() error = %v", err)
+	}
+	if got, want := contextID, "workflow-id"; got != want {
+		t.Fatalf("contextID = %q, want %q", got, want)
+	}
+	if got, want := contextName, "workflow context"; got != want {
+		t.Fatalf("contextName = %q, want %q", got, want)
 	}
 }
 
@@ -371,6 +470,591 @@ func TestFilesCommandMissingFlagWritesFailureJSON(t *testing.T) {
 	}
 	if !strings.Contains(stdout, `"ok": false`) || !strings.Contains(stdout, "--id is required") {
 		t.Fatalf("stdout = %s, want missing id failure", stdout)
+	}
+}
+
+func TestWorkflowValidateAcceptsNestedArrayPlan(t *testing.T) {
+	dir := t.TempDir()
+	workflowPath := filepath.Join(dir, "workflow.yaml")
+	if err := os.WriteFile(workflowPath, []byte(`version: 1
+name: demo
+steps:
+  - name: prepare
+    file: prepare.sas
+  - - name: branch-a
+      file: branch-a.sas
+    - name: branch-b
+      file: branch-b.sas
+`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	stdout, _, err := executeCLI("workflow", "-o", "json", "validate", "--file", workflowPath)
+	if err != nil {
+		t.Fatalf("executeCLI() error = %v, stdout = %s", err, stdout)
+	}
+	if !strings.Contains(stdout, `"ok": true`) || !strings.Contains(stdout, "demo") {
+		t.Fatalf("stdout = %s, want valid workflow JSON", stdout)
+	}
+}
+
+func TestWorkflowValidateRejectsUnknownFields(t *testing.T) {
+	workflowPath := filepath.Join(t.TempDir(), "workflow.yaml")
+	if err := os.WriteFile(workflowPath, []byte(`version: 1
+name: bad-workflow
+defaults:
+  includeOuput: true
+steps:
+  - name: prepare
+    file: prepare.sas
+`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	stdout, _, err := executeCLI("workflow", "-o", "json", "validate", "--file", workflowPath)
+	if err == nil {
+		t.Fatal("executeCLI() error = nil, want exit error")
+	}
+	if !strings.Contains(stdout, `"ok": false`) || !strings.Contains(stdout, "unknown field") {
+		t.Fatalf("stdout = %s, want unknown field failure", stdout)
+	}
+}
+
+func TestWorkflowValidateRejectsEmptySteps(t *testing.T) {
+	workflowPath := filepath.Join(t.TempDir(), "workflow.yaml")
+	if err := os.WriteFile(workflowPath, []byte(`version: 1
+name: empty-workflow
+steps: []
+`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	stdout, _, err := executeCLI("workflow", "-o", "json", "validate", "--file", workflowPath)
+	if err == nil {
+		t.Fatal("executeCLI() error = nil, want exit error")
+	}
+	if !strings.Contains(stdout, "steps must contain at least one item") {
+		t.Fatalf("stdout = %s, want empty steps failure", stdout)
+	}
+}
+
+func TestWorkflowValidateRejectsUnsupportedVersion(t *testing.T) {
+	workflowPath := filepath.Join(t.TempDir(), "workflow.yaml")
+	if err := os.WriteFile(workflowPath, []byte(`version: 2
+name: incompatible-workflow
+steps:
+  - name: prepare
+    file: prepare.sas
+`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	stdout, _, err := executeCLI("workflow", "-o", "json", "validate", "--file", workflowPath)
+	if err == nil {
+		t.Fatal("executeCLI() error = nil, want exit error")
+	}
+	if !strings.Contains(stdout, "unsupported workflow version 2") {
+		t.Fatalf("stdout = %s, want unsupported version failure", stdout)
+	}
+}
+
+func TestWorkflowValidateRejectsMalformedStringScalars(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{
+			name: "project name",
+			content: `version: 1
+name: 123
+steps:
+  - name: prepare
+    code: '%put ok;'
+`,
+			want: "workflow.name must be a string",
+		},
+		{
+			name: "step file",
+			content: `version: 1
+name: bad-file
+steps:
+  - name: prepare
+    file: ["prog.sas"]
+`,
+			want: "workflow step.file must be a string",
+		},
+		{
+			name: "null step name",
+			content: `version: 1
+name: null-field
+steps:
+  - name: null
+    code: '%put ok;'
+`,
+			want: "workflow step.name must be a string",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			workflowPath := filepath.Join(t.TempDir(), "workflow.yaml")
+			if err := os.WriteFile(workflowPath, []byte(tt.content), 0o644); err != nil {
+				t.Fatalf("write workflow: %v", err)
+			}
+
+			stdout, _, err := executeCLI("workflow", "-o", "json", "validate", "--file", workflowPath)
+			if err == nil {
+				t.Fatal("executeCLI() error = nil, want exit error")
+			}
+			if !strings.Contains(stdout, tt.want) {
+				t.Fatalf("stdout = %s, want %q", stdout, tt.want)
+			}
+		})
+	}
+}
+
+func TestWorkflowValidateRejectsMalformedBooleanDefaults(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{
+			name: "top level include output",
+			content: `version: 1
+name: bad-bool
+includeOutput: "nope"
+steps:
+  - name: prepare
+    code: '%put ok;'
+`,
+			want: "workflow.includeOutput must be a boolean",
+		},
+		{
+			name: "defaults keep session",
+			content: `version: 1
+name: bad-bool
+defaults:
+  keepSession: 1
+steps:
+  - name: prepare
+    code: '%put ok;'
+`,
+			want: "defaults.keepSession must be a boolean",
+		},
+		{
+			name: "null include output",
+			content: `version: 1
+name: bad-bool
+includeOutput: null
+steps:
+  - name: prepare
+    code: '%put ok;'
+`,
+			want: "workflow.includeOutput must be a boolean",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			workflowPath := filepath.Join(t.TempDir(), "workflow.yaml")
+			if err := os.WriteFile(workflowPath, []byte(tt.content), 0o644); err != nil {
+				t.Fatalf("write workflow: %v", err)
+			}
+
+			stdout, _, err := executeCLI("workflow", "-o", "json", "validate", "--file", workflowPath)
+			if err == nil {
+				t.Fatal("executeCLI() error = nil, want exit error")
+			}
+			if !strings.Contains(stdout, tt.want) {
+				t.Fatalf("stdout = %s, want %q", stdout, tt.want)
+			}
+		})
+	}
+}
+
+func TestWorkflowRunRejectsNonPositiveMaxParallelFlag(t *testing.T) {
+	tests := []string{"0", "-1"}
+	for _, value := range tests {
+		t.Run(value, func(t *testing.T) {
+			dir := t.TempDir()
+			workflowPath := filepath.Join(dir, "workflow.yaml")
+			if err := os.WriteFile(workflowPath, []byte(`version: 1
+name: bad-max-parallel
+steps:
+  - name: prepare
+    code: '%put ok;'
+`), 0o644); err != nil {
+				t.Fatalf("write workflow: %v", err)
+			}
+
+			stdout, _, err := executeCLI("workflow", "--base-url", "https://example.invalid", "--access-token", "test-token", "-o", "json", "run", "--file", workflowPath, "--max-parallel", value)
+			if err == nil {
+				t.Fatal("executeCLI() error = nil, want exit error")
+			}
+			if !strings.Contains(stdout, "--max-parallel must be at least 1") {
+				t.Fatalf("stdout = %s, want max-parallel validation failure", stdout)
+			}
+		})
+	}
+}
+
+func TestWorkflowRunRejectsMalformedUserConfigStringScalars(t *testing.T) {
+	dir := t.TempDir()
+	workflowPath := filepath.Join(dir, "workflow.yaml")
+	if err := os.WriteFile(workflowPath, []byte(`version: 1
+name: bad-user-config
+steps:
+  - name: prepare
+    code: '%put ok;'
+`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+	userConfigPath := filepath.Join(dir, "user.yaml")
+	if err := os.WriteFile(userConfigPath, []byte(`contextName: ["ctx"]
+`), 0o644); err != nil {
+		t.Fatalf("write user config: %v", err)
+	}
+
+	stdout, _, err := executeCLI("workflow", "--base-url", "https://example.invalid", "--access-token", "test-token", "--user-config", userConfigPath, "-o", "json", "run", "--file", workflowPath)
+	if err == nil {
+		t.Fatal("executeCLI() error = nil, want exit error")
+	}
+	if !strings.Contains(stdout, "user.yaml.contextName must be a string") {
+		t.Fatalf("stdout = %s, want malformed user config failure", stdout)
+	}
+}
+
+func TestWorkflowValidateRejectsInvalidVariableNames(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{
+			name: "step variable name",
+			content: `version: 1
+name: invalid-step-variable
+steps:
+  - name: prepare
+    code: '%put ok;'
+    variables:
+      bad-name: value
+`,
+			want: "workflow step.variables[bad-name] must be a valid SAS macro variable name",
+		},
+		{
+			name: "step variable value",
+			content: `version: 1
+name: invalid-step-variable-value
+steps:
+  - name: prepare
+    code: '%put ok;'
+    variables:
+      FOO: 1
+`,
+			want: "workflow step.variables[FOO] must be a string",
+		},
+		{
+			name: "user variable name",
+			content: `version: 1
+name: invalid-user-variable
+steps:
+  - name: prepare
+    code: '%put ok;'
+`,
+			want: "user.yaml.variables[bad.name] must be a valid SAS macro variable name",
+		},
+		{
+			name: "user variable value",
+			content: `version: 1
+name: invalid-user-variable-value
+steps:
+  - name: prepare
+    code: '%put ok;'
+`,
+			want: "user.yaml.variables[FOO] must be a string",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			workflowPath := filepath.Join(t.TempDir(), "workflow.yaml")
+			if err := os.WriteFile(workflowPath, []byte(tt.content), 0o644); err != nil {
+				t.Fatalf("write workflow: %v", err)
+			}
+
+			args := []string{"workflow", "-o", "json", "validate", "--file", workflowPath}
+			if tt.name == "user variable name" {
+				userConfigPath := filepath.Join(t.TempDir(), "user.yaml")
+				if err := os.WriteFile(userConfigPath, []byte(`variables:
+  bad.name: value
+`), 0o644); err != nil {
+					t.Fatalf("write user config: %v", err)
+				}
+				args = []string{"workflow", "--user-config", userConfigPath, "-o", "json", "run", "--file", workflowPath}
+				// validate path remains focused on project file validation; user config variables
+				// are exercised by the run path because they are emitted into wrapper code.
+			} else if tt.name == "user variable value" {
+				userConfigPath := filepath.Join(t.TempDir(), "user.yaml")
+				if err := os.WriteFile(userConfigPath, []byte(`variables:
+  FOO: 1
+`), 0o644); err != nil {
+					t.Fatalf("write user config: %v", err)
+				}
+				args = []string{"workflow", "--user-config", userConfigPath, "-o", "json", "run", "--file", workflowPath}
+				// user config variables are exercised by the run path because they are emitted into wrapper code.
+			}
+
+			stdout, _, err := executeCLI(args...)
+			if err == nil {
+				t.Fatal("executeCLI() error = nil, want exit error")
+			}
+			if tt.name == "user variable name" {
+				if !strings.Contains(stdout, "user.yaml.variables[bad.name] must be a valid SAS macro variable name") {
+					t.Fatalf("stdout = %s, want workflow variable failure", stdout)
+				}
+				return
+			}
+			if tt.name == "user variable value" {
+				if !strings.Contains(stdout, "user.yaml.variables[FOO] must be a string") {
+					t.Fatalf("stdout = %s, want workflow variable failure", stdout)
+				}
+				return
+			}
+			if !strings.Contains(stdout, tt.want) {
+				t.Fatalf("stdout = %s, want %q", stdout, tt.want)
+			}
+		})
+	}
+}
+
+func TestWorkflowRunUsesSingleComputeSessionForMultipleJobs(t *testing.T) {
+	dir := t.TempDir()
+	for name, content := range map[string]string{
+		"prepare.sas":  "data _null_; put 'prepare'; run;",
+		"branch-a.sas": "data _null_; put 'a'; run;",
+		"branch-b.sas": "data _null_; put 'b'; run;",
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+	workflowPath := filepath.Join(dir, "workflow.json")
+	if err := os.WriteFile(workflowPath, []byte(`{
+  "version": 1,
+  "name": "demo-workflow",
+  "maxParallel": 2,
+  "contextId": "ctx-1",
+  "includeOutput": true,
+  "steps": [
+    {"name": "prepare", "file": "prepare.sas", "log": "logs/prepare.log"},
+    [
+      {"name": "branch-a", "file": "branch-a.sas"},
+      {"name": "branch-b", "file": "branch-b.sas"}
+    ]
+  ]
+}`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+	userConfigPath := filepath.Join(dir, "user.yaml")
+	if err := os.WriteFile(userConfigPath, []byte(`autoexec: '%put autoexec;'
+preCode: '%put pre;'
+postCode: '%put post;'
+variables:
+  USER_LEVEL: yes
+`), 0o644); err != nil {
+		t.Fatalf("write user config: %v", err)
+	}
+
+	var mu sync.Mutex
+	createdSessions := 0
+	createdJobs := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/compute/contexts/ctx-1":
+			_, _ = w.Write([]byte(`{"id":"ctx-1","name":"ctx one"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/compute/contexts/ctx-1/sessions":
+			createdSessions++
+			var body struct {
+				Name        string `json:"name"`
+				Environment struct {
+					InitCode []string `json:"initCode"`
+				} `json:"environment"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode session request: %v", err)
+			}
+			if got, want := body.Name, "demo-workflow"; got != want {
+				t.Fatalf("session name = %q, want %q", got, want)
+			}
+			if len(body.Environment.InitCode) == 0 || !strings.Contains(body.Environment.InitCode[0], "autoexec") {
+				t.Fatalf("initCode = %#v, want autoexec", body.Environment.InitCode)
+			}
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"id":"session-1","name":"demo-workflow","state":"idle"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/compute/sessions/session-1/jobs":
+			createdJobs++
+			var body struct {
+				Name      string         `json:"name"`
+				Code      []string       `json:"code"`
+				Variables map[string]any `json:"variables"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode job request: %v", err)
+			}
+			joined := strings.Join(body.Code, "\n")
+			if !strings.Contains(joined, "%put pre;") || !strings.Contains(joined, "%put post;") {
+				t.Fatalf("job code = %q, want pre/post code", joined)
+			}
+			if body.Variables["WORKFLOW_STEP_PATH"] == "" || body.Variables["USER_LEVEL"] != "yes" {
+				t.Fatalf("variables = %#v, want workflow paths and user variables", body.Variables)
+			}
+			if body.Variables["_SASPROGRAMFILE"] == "" || body.Variables["_SASPROGRAMDIR"] == "" {
+				t.Fatalf("variables = %#v, want SAS program path variables", body.Variables)
+			}
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"id":"job-` + body.Name + `","sessionId":"session-1","state":"running"}`))
+		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-1/jobs/job-") && strings.HasSuffix(r.URL.Path, "/state"):
+			w.Header().Set("Content-Type", "text/plain")
+			_, _ = w.Write([]byte("completed"))
+		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-1/jobs/job-") && !strings.HasSuffix(r.URL.Path, "/state") && !strings.HasSuffix(r.URL.Path, "/log") && !strings.HasSuffix(r.URL.Path, "/listing"):
+			_, _ = w.Write([]byte(`{"id":"job-info","sessionId":"session-1","state":"completed","jobConditionCode":0}`))
+		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/log"):
+			w.Header().Set("Content-Type", "text/plain")
+			_, _ = w.Write([]byte("workflow log"))
+		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/listing"):
+			w.Header().Set("Content-Type", "text/plain")
+			_, _ = w.Write([]byte("workflow listing"))
+		case r.Method == http.MethodDelete && r.URL.Path == "/compute/sessions/session-1":
+			w.WriteHeader(http.StatusAccepted)
+		default:
+			t.Fatalf("unexpected request %s %s", r.Method, r.RequestURI)
+		}
+	}))
+	defer server.Close()
+
+	stdout, _, err := executeCLI("workflow", "--base-url", server.URL, "--access-token", "test-token", "--user-config", userConfigPath, "-o", "json", "run", "--file", workflowPath)
+	if err != nil {
+		t.Fatalf("executeCLI() error = %v, stdout = %s", err, stdout)
+	}
+	if createdSessions != 1 {
+		t.Fatalf("createdSessions = %d, want 1", createdSessions)
+	}
+	if createdJobs != 3 {
+		t.Fatalf("createdJobs = %d, want 3", createdJobs)
+	}
+	if !strings.Contains(stdout, `"ok": true`) || !strings.Contains(stdout, `"kind": "parallel"`) {
+		t.Fatalf("stdout = %s, want workflow result JSON", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "logs", "prepare.log")); err != nil {
+		t.Fatalf("expected log artifact: %v", err)
+	}
+}
+
+func TestWorkflowRunUsesContextFromUserConfig(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "program.sas"), []byte("data _null_; put 'hello'; run;"), 0o644); err != nil {
+		t.Fatalf("write program: %v", err)
+	}
+	workflowPath := filepath.Join(dir, "workflow.yaml")
+	if err := os.WriteFile(workflowPath, []byte(`version: 1
+name: user-context
+steps:
+  - name: program
+    file: program.sas
+`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+	userConfigPath := filepath.Join(dir, "user.yaml")
+	if err := os.WriteFile(userConfigPath, []byte(`contextName: user context
+preCode: '%put user context;'
+`), 0o644); err != nil {
+		t.Fatalf("write user config: %v", err)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/compute/contexts":
+			_, _ = w.Write([]byte(`{"count":1,"items":[{"id":"ctx-user","name":"user context"}]}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/compute/contexts/ctx-user/sessions":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"id":"session-user","name":"user-context","state":"idle"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/compute/sessions/session-user/jobs":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"id":"job-user","sessionId":"session-user","state":"running"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/compute/sessions/session-user/jobs/job-user/state":
+			w.Header().Set("Content-Type", "text/plain")
+			_, _ = w.Write([]byte("completed"))
+		case r.Method == http.MethodGet && r.URL.Path == "/compute/sessions/session-user/jobs/job-user":
+			_, _ = w.Write([]byte(`{"id":"job-user","sessionId":"session-user","state":"completed","jobConditionCode":0}`))
+		case r.Method == http.MethodDelete && r.URL.Path == "/compute/sessions/session-user":
+			w.WriteHeader(http.StatusAccepted)
+		default:
+			t.Fatalf("unexpected request %s %s", r.Method, r.RequestURI)
+		}
+	}))
+	defer server.Close()
+
+	stdout, _, err := executeCLI("workflow", "--base-url", server.URL, "--access-token", "test-token", "--user-config", userConfigPath, "-o", "json", "run", "--file", workflowPath)
+	if err != nil {
+		t.Fatalf("executeCLI() error = %v, stdout = %s", err, stdout)
+	}
+	if !strings.Contains(stdout, `"contextId": "ctx-user"`) || !strings.Contains(stdout, `"contextName": "user context"`) {
+		t.Fatalf("stdout = %s, want context from user config", stdout)
+	}
+}
+
+func TestWorkflowRunFailsWhenComputeJobStateIsNotCompleted(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "program.sas"), []byte("data _null_; put 'fail'; run;"), 0o644); err != nil {
+		t.Fatalf("write program: %v", err)
+	}
+	workflowPath := filepath.Join(dir, "workflow.yaml")
+	if err := os.WriteFile(workflowPath, []byte(`version: 1
+name: failed-state
+steps:
+  - name: only-step
+    file: program.sas
+`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/compute/contexts":
+			_, _ = w.Write([]byte(`{"count":1,"items":[{"id":"ctx-1","name":"SAS Job Execution compute context"}]}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/compute/contexts/ctx-1/sessions":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"id":"session-1","name":"failed-state","state":"idle"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/compute/sessions/session-1/jobs":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"id":"job-1","sessionId":"session-1","state":"running"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/compute/sessions/session-1/jobs/job-1/state":
+			w.Header().Set("Content-Type", "text/plain")
+			_, _ = w.Write([]byte("failed"))
+		case r.Method == http.MethodGet && r.URL.Path == "/compute/sessions/session-1/jobs/job-1":
+			_, _ = w.Write([]byte(`{"id":"job-1","sessionId":"session-1","state":"failed","jobConditionCode":5}`))
+		case r.Method == http.MethodDelete && r.URL.Path == "/compute/sessions/session-1":
+			w.WriteHeader(http.StatusAccepted)
+		default:
+			t.Fatalf("unexpected request %s %s", r.Method, r.RequestURI)
+		}
+	}))
+	defer server.Close()
+
+	stdout, _, err := executeCLI("workflow", "--base-url", server.URL, "--access-token", "test-token", "-o", "json", "run", "--file", workflowPath)
+	if err == nil {
+		t.Fatalf("executeCLI() error = nil, stdout = %s", stdout)
+	}
+	if !strings.Contains(stdout, `"ok": false`) || !strings.Contains(stdout, `compute job finished with state \"failed\"`) {
+		t.Fatalf("stdout = %s, want failed state error", stdout)
 	}
 }
 

@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/dingdayu/go-viya/main/examples/viya-cli/workflow.schema.json",
+  "title": "viya-cli workflow",
+  "description": "Project-level workflow plan for viya-cli workflow run. Top-level steps run serially; one nested array runs its child work items in parallel.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["steps"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional editor hint pointing at this schema."
+    },
+    "version": {
+      "type": "integer",
+      "enum": [1],
+      "default": 1
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-friendly workflow name and Compute session name."
+    },
+    "maxParallel": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum number of parallel work items to run inside a nested array."
+    },
+    "contextId": {
+      "type": "string",
+      "description": "Default Compute context ID for this project workflow."
+    },
+    "contextName": {
+      "type": "string",
+      "description": "Default Compute context name for this project workflow."
+    },
+    "includeOutput": {
+      "type": "boolean",
+      "description": "Whether to retrieve Compute log/listing text for work items."
+    },
+    "keepSession": {
+      "type": "boolean",
+      "description": "Keep the Compute session after the workflow completes."
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contextId": { "type": "string" },
+        "contextName": { "type": "string" },
+        "includeOutput": { "type": "boolean" },
+        "keepSession": { "type": "boolean" }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/work" },
+          {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/$defs/work" }
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "work": {
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [
+        { "required": ["file"] },
+        { "required": ["work"] },
+        { "required": ["code"] }
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Optional stable identifier. Used as the name when name is absent."
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-friendly work item name and Compute job name."
+        },
+        "file": {
+          "type": "string",
+          "description": "SAS file path relative to the workflow file directory."
+        },
+        "work": {
+          "type": "string",
+          "description": "Alias for file, useful for compact workflow files."
+        },
+        "path": {
+          "type": "string",
+          "description": "Alias for file."
+        },
+        "code": {
+          "type": "string",
+          "description": "Inline SAS code to prepend before the file body, or to run by itself when no file is set."
+        },
+        "log": {
+          "type": "string",
+          "description": "Optional path for saving this job's Compute log text."
+        },
+        "listing": {
+          "type": "string",
+          "description": "Optional path for saving this job's listing text."
+        },
+        "variables": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Non-secret string variables passed to Compute job variables and SAS macro variables."
+        }
+      }
+    }
+  }
+}
