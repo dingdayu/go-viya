@@ -58,9 +58,9 @@ func (c *Client) GetBatchJobsList(ctx context.Context) (resp BatchJobsResponse, 
 }
 
 // GetBatchJobInfo returns details for a SAS Viya Batch job.
-func (c *Client) GetBatchJobInfo(ctx context.Context, jobId string) (resp BatchJob, err error) {
-	if jobId == "" {
-		return resp, &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+func (c *Client) GetBatchJobInfo(ctx context.Context, jobID string) (resp BatchJob, err error) {
+	if jobID == "" {
+		return resp, &ErrInvalidParameter{Parameter: "jobID", Reason: "must not be empty"}
 	}
 
 	ctx, span := tracer.Start(ctx, "GetBatchJobInfo")
@@ -69,7 +69,7 @@ func (c *Client) GetBatchJobInfo(ctx context.Context, jobId string) (resp BatchJ
 	r, err := c.client.R().SetHeader("Accept", AcceptBatchJobState).
 		SetContext(ctx).
 		SetResult(&resp).
-		Get(fmt.Sprintf("/batch/jobs/%s", jobId))
+		Get(fmt.Sprintf("/batch/jobs/%s", jobID))
 	if err != nil {
 		return resp, err
 	}
@@ -130,9 +130,9 @@ func (c *Client) CreateBatchJob(ctx context.Context, req SubmitBatchJobRequest) 
 }
 
 // DeleteBatchJob deletes a SAS Viya Batch job.
-func (c *Client) DeleteBatchJob(ctx context.Context, jobId string) (err error) {
-	if jobId == "" {
-		return &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+func (c *Client) DeleteBatchJob(ctx context.Context, jobID string) (err error) {
+	if jobID == "" {
+		return &ErrInvalidParameter{Parameter: "jobID", Reason: "must not be empty"}
 	}
 
 	ctx, span := tracer.Start(ctx, "DeleteBatchJob")
@@ -140,7 +140,8 @@ func (c *Client) DeleteBatchJob(ctx context.Context, jobId string) (err error) {
 
 	r, err := c.client.R().
 		SetContext(ctx).
-		Delete(fmt.Sprintf("/batch/jobs/%s", jobId))
+		SetHeader("Accept", AcceptErrorOnly).
+		Delete(fmt.Sprintf("/batch/jobs/%s", jobID))
 	if err != nil {
 		return err
 	}
@@ -159,9 +160,9 @@ type BatchJobInputRequest struct {
 }
 
 // SendBatchJobInput sends STDIN text lines to a running SAS Viya Batch job.
-func (c *Client) SendBatchJobInput(ctx context.Context, jobId string, input []string) (err error) {
-	if jobId == "" {
-		return &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+func (c *Client) SendBatchJobInput(ctx context.Context, jobID string, input []string) (err error) {
+	if jobID == "" {
+		return &ErrInvalidParameter{Parameter: "jobID", Reason: "must not be empty"}
 	}
 
 	ctx, span := tracer.Start(ctx, "SendBatchJobInput")
@@ -175,7 +176,7 @@ func (c *Client) SendBatchJobInput(ctx context.Context, jobId string, input []st
 			Input:   input,
 			Version: 1,
 		}).
-		Post(fmt.Sprintf("/batch/jobs/%s/input", jobId))
+		Post(fmt.Sprintf("/batch/jobs/%s/input", jobID))
 	if err != nil {
 		return err
 	}
@@ -195,9 +196,9 @@ type BatchJobOutput struct {
 }
 
 // GetBatchJobOutput retrieves STDOUT and STDERR text from a running SAS Viya Batch job.
-func (c *Client) GetBatchJobOutput(ctx context.Context, jobId string) (resp BatchJobOutput, err error) {
-	if jobId == "" {
-		return resp, &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+func (c *Client) GetBatchJobOutput(ctx context.Context, jobID string) (resp BatchJobOutput, err error) {
+	if jobID == "" {
+		return resp, &ErrInvalidParameter{Parameter: "jobID", Reason: "must not be empty"}
 	}
 
 	ctx, span := tracer.Start(ctx, "GetBatchJobOutput")
@@ -207,7 +208,7 @@ func (c *Client) GetBatchJobOutput(ctx context.Context, jobId string) (resp Batc
 		SetContext(ctx).
 		SetHeader("Accept", AcceptJSONError).
 		SetResult(&resp).
-		Post(fmt.Sprintf("/batch/jobs/%s/output", jobId))
+		Post(fmt.Sprintf("/batch/jobs/%s/output", jobID))
 	if err != nil {
 		return resp, err
 	}
@@ -220,9 +221,9 @@ func (c *Client) GetBatchJobOutput(ctx context.Context, jobId string) (resp Batc
 }
 
 // GetBatchJobState returns the plain-text state for a SAS Viya Batch job.
-func (c *Client) GetBatchJobState(ctx context.Context, jobId string) (state string, err error) {
-	if jobId == "" {
-		return "", &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+func (c *Client) GetBatchJobState(ctx context.Context, jobID string) (state string, err error) {
+	if jobID == "" {
+		return "", &ErrInvalidParameter{Parameter: "jobID", Reason: "must not be empty"}
 	}
 
 	ctx, span := tracer.Start(ctx, "GetBatchJobState")
@@ -231,7 +232,7 @@ func (c *Client) GetBatchJobState(ctx context.Context, jobId string) (state stri
 	r, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Accept", AcceptTextError).
-		Get(fmt.Sprintf("/batch/jobs/%s/state", jobId))
+		Get(fmt.Sprintf("/batch/jobs/%s/state", jobID))
 	if err != nil {
 		return "", err
 	}
@@ -244,9 +245,9 @@ func (c *Client) GetBatchJobState(ctx context.Context, jobId string) (state stri
 }
 
 // CancelBatchJob requests cancellation of a SAS Viya Batch job.
-func (c *Client) CancelBatchJob(ctx context.Context, jobId string) (err error) {
-	if jobId == "" {
-		return &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+func (c *Client) CancelBatchJob(ctx context.Context, jobID string) (err error) {
+	if jobID == "" {
+		return &ErrInvalidParameter{Parameter: "jobID", Reason: "must not be empty"}
 	}
 
 	ctx, span := tracer.Start(ctx, "CancelBatchJob")
@@ -256,7 +257,7 @@ func (c *Client) CancelBatchJob(ctx context.Context, jobId string) (err error) {
 		SetContext(ctx).
 		SetHeader("Accept", AcceptErrorOnly).
 		SetQueryParam("value", "canceled").
-		Put(fmt.Sprintf("/batch/jobs/%s/state", jobId))
+		Put(fmt.Sprintf("/batch/jobs/%s/state", jobID))
 	if err != nil {
 		return err
 	}
@@ -278,9 +279,9 @@ func (c *Client) CancelBatchJob(ctx context.Context, jobId string) (err error) {
 //   - 500ms for interactive use
 //   - 2s for batch processing
 //   - 5s for background monitoring
-func (c *Client) WaitBatchJobCompleted(ctx context.Context, jobId string, interval time.Duration) (jobInfo BatchJob, err error) {
-	if jobId == "" {
-		return jobInfo, &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
+func (c *Client) WaitBatchJobCompleted(ctx context.Context, jobID string, interval time.Duration) (jobInfo BatchJob, err error) {
+	if jobID == "" {
+		return jobInfo, &ErrInvalidParameter{Parameter: "jobID", Reason: "must not be empty"}
 	}
 
 	ctx, span := tracer.Start(ctx, "WaitBatchJobCompleted")
@@ -291,7 +292,7 @@ func (c *Client) WaitBatchJobCompleted(ctx context.Context, jobId string, interv
 		case <-ctx.Done():
 			return jobInfo, ctx.Err()
 		case <-time.After(interval):
-			nextJobInfo, err := c.GetBatchJobInfo(ctx, jobId)
+			nextJobInfo, err := c.GetBatchJobInfo(ctx, jobID)
 			if err != nil {
 				return jobInfo, err
 			}
