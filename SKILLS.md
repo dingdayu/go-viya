@@ -76,14 +76,17 @@ rules live in `AGENTS.md`; detailed constraints live in `docs/`.
 - `go mod tidy`: keep module metadata deterministic after dependency or import
   changes.
 - `go vet ./...`: catch common Go correctness issues.
-- `go test ./...`: required unit-test baseline for code changes.
-- `go test -race ./...`: required for concurrency-sensitive client,
-  authentication, token, middleware, transport, and default-client changes.
+- `go test -race -cover ./...`: required unit-test baseline (race detection
+  and coverage are always enabled).
 - `git diff --check`: required whitespace check for documentation-only changes.
 - `goreleaser check`: validate release configuration when preparing releases
   and GoReleaser is available.
 - `go run golang.org/x/exp/cmd/gorelease@latest -base=latest`: check public Go
   API compatibility after the first public tag exists.
+- Test assertions use `github.com/stretchr/testify` (assert, require) for new
+  tests; existing tests use `t.Fatalf` which is also acceptable.
+- Use `t.Parallel()` on httptest-based tests that do not mutate global state.
+- Use `t.Helper()` on test helper functions that accept `*testing.T`.
 
 ## Agent-Facing Tooling and Examples
 

@@ -21,11 +21,19 @@ When adding endpoint helpers:
 
 - Accept `context.Context` for I/O methods and propagate it to the request.
 - Build paths in the same style as nearby service helpers.
+- Use the predefined `Accept*` constants from `response.go` for Content-Type
+  negotiation instead of inline media type strings.
 - Preserve authentication behavior and shared Resty client behavior.
+- Return pure `error` for state-changing operations that have no meaningful
+  response body (the boolean pattern was removed in v0.7.0 — callers check
+  `err != nil` only). For resource-returning operations, use the standard
+  `(resp Type, err error)` named return pattern.
 - Return clear operation context in errors and include HTTP status where useful.
 - Decode stable responses into typed structs.
 - Use `map[string]any` only for dynamic configuration or intentionally open-ended
   payloads.
+- Add OpenTelemetry spans (`ctx, span := tracer.Start(ctx, "MethodName")`) to
+  every public endpoint method for observability.
 - Include tests for method, path, authentication behavior, request body, status
   and error handling, and response decoding.
 

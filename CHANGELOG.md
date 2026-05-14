@@ -6,7 +6,50 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
-## [0.6.0](https://github.com/dingdayu/go-viya/compare/v0.5.0...v0.6.0) (2026-05-11)
+### ⚠ BREAKING CHANGES
+
+* `RefreshIdentitiesCache`, `PatchIdentitiesLDAPUser`, and `UpdateIdentitiesLDAPObjectFilter` no longer return a redundant boolean — they now return `error` directly. Callers that check the boolean should switch to checking `err` only.
+
+### Features
+
+* add Accept header constants to eliminate string duplication across endpoint helpers
+* add concurrent-access test for token providers
+* add test helpers for httptest server setup
+
+### Bug Fixes
+
+* add nil check for baseURL in NewClient to prevent panic
+* add missing Accept header to CAS table state operations
+* add missing Accept header to DeleteBatchJob
+* remove redundant parameter validation in uploadBatchFileFromReader
+* tighten golangci-lint exclusion rules
+
+### Code Refactoring
+
+* simplify identities API by removing redundant boolean return values
+* unify parameter naming: jobId→jobID, serverId→serverID, contextId→contextID
+* remove otelhttp transport wrapper from token HTTP client (rely on application-level spans)
+* remove unnecessary ErrInvalidParameter.Unwrap method
+
+### Documentation
+
+* add polling interval guidance to WaitBatchJobCompleted godoc
+* translate Chinese comments to English in identities.go
+
+### Dependencies
+
+* update golang.org/x/net from v0.43.0 to v0.50.0
+* add github.com/stretchr/testify for test assertions
+
+### Test Improvements
+
+* add table-driven tests for ParseURL, TokenURL, ErrorResponse
+* add testify assertions across new test files
+* add parallel test execution to most httptest-based tests
+* add tests for UploadFile, GetComputeJobsList, GetIdentitiesUsers, GetConfiguration
+* add t.Helper() to test helpers
+
+## [0.6.0](https://github.com/dingdayu/go-viya/compare/v0.5.0...v0.6.0) (2026-05-11)(https://github.com/dingdayu/go-viya/compare/v0.5.0...v0.6.0) (2026-05-11)
 
 
 ### Features

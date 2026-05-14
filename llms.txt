@@ -52,11 +52,16 @@ This repository is intentionally narrow in scope: it is not a generated client f
 - `gofmt -w .`
 - `go mod tidy`
 - `go vet ./...`
-- `go test ./...`
-- `go test -race ./...` for authentication, HTTP middleware, default-client, token cache, transport, or shared client changes
+- `go test -race -cover ./...`
 
 ## Notes for contributors
 
 - Keep the API narrow and focused on tested SAS Viya workflows.
 - Preserve Resty and OpenTelemetry behavior when changing shared client or token code.
 - Keep README examples aligned with the exported API.
+- Accept header media types are defined as exported constants in `response.go`.
+  Use them instead of inline strings when adding new endpoint helpers.
+- State-changing operations that return no resource body should return `error`
+  only (not `(bool, error)`). Error-only signaling was standardized in v0.7.0.
+- New tests should use `github.com/stretchr/testify` for assertions and
+  `t.Parallel()` for httptest-based tests where possible.
