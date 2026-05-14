@@ -60,7 +60,9 @@ func (c *Client) GetIdentitiesUsers(ctx context.Context) (identitiesUserResp Ide
 	return identitiesUserResp, nil
 }
 
-// NOTE: 以下未经过验证，推荐通过 AD 域中的组进行控制，objectFilter 已经切换到 通过组配置了
+// NOTE: The following identities helpers are not verified against a live SAS Viya deployment.
+// LDAP group-based access control is recommended over manual objectFilter management
+// since the provider has already switched to group-based configuration.
 
 // GetIdentitiesLDAPUser retrieves the LDAP user provider configuration.
 //
@@ -165,10 +167,8 @@ func (c *Client) UpdateIdentitiesLDAPObjectFilter(ctx context.Context, usernames
 	return true, nil
 }
 
-// strOrEmpty tries to assert v as string and returns "" if it can't.
+// strOrEmpty returns v as a string, or "" if v is not a string.
 func strOrEmpty(v any) string {
-	if s, ok := v.(string); ok {
-		return s
-	}
-	return ""
+	s, _ := v.(string)
+	return s
 }
