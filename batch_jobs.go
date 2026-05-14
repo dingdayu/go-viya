@@ -42,8 +42,7 @@ func (c *Client) GetBatchJobsList(ctx context.Context) (resp BatchJobsResponse, 
 	ctx, span := tracer.Start(ctx, "GetBatchJobsList")
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.collection+json;version=2, application/vnd.sas.error+json"
-	r, err := c.client.R().SetHeader("Accept", contextAccept).
+	r, err := c.client.R().SetHeader("Accept", AcceptCollection).
 		SetContext(ctx).
 		SetResult(&resp).
 		Get("/batch/jobs")
@@ -67,8 +66,7 @@ func (c *Client) GetBatchJobInfo(ctx context.Context, jobId string) (resp BatchJ
 	ctx, span := tracer.Start(ctx, "GetBatchJobInfo")
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.batch.job.state+json, application/vnd.sas.batch.job.state+json;version=1, application/vnd.sas.batch.job+json, application/vnd.sas.batch.job+json;version=1, application/vnd.sas.error+json"
-	r, err := c.client.R().SetHeader("Accept", contextAccept).
+	r, err := c.client.R().SetHeader("Accept", AcceptBatchJobState).
 		SetContext(ctx).
 		SetResult(&resp).
 		Get(fmt.Sprintf("/batch/jobs/%s", jobId))
@@ -113,10 +111,9 @@ func (c *Client) CreateBatchJob(ctx context.Context, req SubmitBatchJobRequest) 
 	ctx, span := tracer.Start(ctx, "CreateBatchJob")
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.batch.job+json, application/vnd.sas.batch.job+json;version=1, application/vnd.sas.error+json"
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptBatchJob).
 		SetBody(req).
 		SetContentType("application/json").
 		SetResult(&resp).
@@ -170,10 +167,9 @@ func (c *Client) SendBatchJobInput(ctx context.Context, jobId string, input []st
 	ctx, span := tracer.Start(ctx, "SendBatchJobInput")
 	defer span.End()
 
-	contextAccept := "application/vnd.sas.error+json"
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptErrorOnly).
 		SetContentType("application/json").
 		SetBody(BatchJobInputRequest{
 			Input:   input,
@@ -207,10 +203,9 @@ func (c *Client) GetBatchJobOutput(ctx context.Context, jobId string) (resp Batc
 	ctx, span := tracer.Start(ctx, "GetBatchJobOutput")
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.error+json"
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptJSONError).
 		SetResult(&resp).
 		Post(fmt.Sprintf("/batch/jobs/%s/output", jobId))
 	if err != nil {
@@ -235,7 +230,7 @@ func (c *Client) GetBatchJobState(ctx context.Context, jobId string) (state stri
 
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", "text/plain, application/vnd.sas.error+json").
+		SetHeader("Accept", AcceptTextError).
 		Get(fmt.Sprintf("/batch/jobs/%s/state", jobId))
 	if err != nil {
 		return "", err
@@ -259,7 +254,7 @@ func (c *Client) CancelBatchJob(ctx context.Context, jobId string) (err error) {
 
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", "application/vnd.sas.error+json").
+		SetHeader("Accept", AcceptErrorOnly).
 		SetQueryParam("value", "canceled").
 		Put(fmt.Sprintf("/batch/jobs/%s/state", jobId))
 	if err != nil {
@@ -278,6 +273,11 @@ func (c *Client) CancelBatchJob(ctx context.Context, jobId string) (err error) {
 // It returns the final job details when the job state is "completed" or "failed".
 // The wait stops early when ctx is canceled or GetBatchJobInfo returns an error.
 // In that case, the returned BatchJob contains the most recent job details, if any.
+//
+// The interval parameter controls the polling frequency. Recommended values:
+//   - 500ms for interactive use
+//   - 2s for batch processing
+//   - 5s for background monitoring
 func (c *Client) WaitBatchJobCompleted(ctx context.Context, jobId string, interval time.Duration) (jobInfo BatchJob, err error) {
 	if jobId == "" {
 		return jobInfo, &ErrInvalidParameter{Parameter: "jobId", Reason: "must not be empty"}
@@ -286,14 +286,11 @@ func (c *Client) WaitBatchJobCompleted(ctx context.Context, jobId string, interv
 	ctx, span := tracer.Start(ctx, "WaitBatchJobCompleted")
 	defer span.End()
 
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
 	for {
 		select {
 		case <-ctx.Done():
 			return jobInfo, ctx.Err()
-		case <-ticker.C:
+		case <-time.After(interval):
 			nextJobInfo, err := c.GetBatchJobInfo(ctx, jobId)
 			if err != nil {
 				return jobInfo, err

@@ -162,7 +162,7 @@ func (c *Client) GetCASTableInfo(ctx context.Context, serverID string, caslibNam
 
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", "application/json, application/vnd.sas.error+json").
+		SetHeader("Accept", AcceptJSONError).
 		SetResult(&resp).
 		Get(fmt.Sprintf("/casManagement/servers/%s/caslibs/%s/tables/%s", serverID, url.PathEscape(caslibName), url.PathEscape(tableName)))
 	if err != nil {
@@ -321,7 +321,7 @@ type casRowSetResponse struct {
 func (c *Client) collectionRequest(ctx context.Context, opts ListOptions) *resty.Request {
 	req := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", "application/json, application/vnd.sas.collection+json;version=2, application/vnd.sas.error+json")
+		SetHeader("Accept", AcceptCollection)
 	if opts.Start > 0 {
 		req.SetQueryParam("start", fmt.Sprintf("%d", opts.Start))
 	}

@@ -32,10 +32,9 @@ func (c *Client) getComputeLogLines(ctx context.Context, spanName string, path s
 	ctx, span := tracer.Start(ctx, spanName)
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.collection+json;version=2, application/vnd.sas.error+json"
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptCollection).
 		SetResult(&resp).
 		Get(path)
 	if err != nil {
@@ -55,7 +54,7 @@ func (c *Client) getComputeText(ctx context.Context, spanName string, path strin
 
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", "text/plain, application/vnd.sas.error+json").
+		SetHeader("Accept", AcceptTextError).
 		Get(path)
 	if err != nil {
 		return "", err

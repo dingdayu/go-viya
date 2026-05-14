@@ -46,9 +46,8 @@ func (c *Client) GetBatchContexts(ctx context.Context) (resp BatchContextsRespon
 	ctx, span := tracer.Start(ctx, "GetBatchContexts")
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.collection+json;version=2, application/vnd.sas.error+json"
 	r, err := c.client.R().
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptCollection).
 		SetContext(ctx).
 		SetResult(&resp).
 		Get("/batch/contexts")
@@ -68,9 +67,8 @@ func (c *Client) GetBatchContextByName(ctx context.Context, name string) (resp B
 	ctx, span := tracer.Start(ctx, "GetBatchContextByName")
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.batch.context+json, application/vnd.sas.error+json"
 	r, err := c.client.R().
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptBatchContext).
 		SetContext(ctx).
 		SetQueryParam("name", name).
 		SetResult(&resp).

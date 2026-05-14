@@ -52,10 +52,9 @@ func (c *Client) CreateComputeSession(ctx context.Context, contextId string, req
 	ctx, span := tracer.Start(ctx, "CreateComputeSession")
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.compute.session+json, application/vnd.sas.error+json"
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptComputeSession).
 		SetContentType("application/json").
 		SetBody(req).
 		SetResult(&resp).
@@ -76,10 +75,9 @@ func (c *Client) GetComputeSessionsList(ctx context.Context) (resp ComputeSessio
 	ctx, span := tracer.Start(ctx, "GetComputeSessionsList")
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.collection+json;version=2, application/vnd.sas.error+json"
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptCollection).
 		SetHeader("Accept-Item", "application/vnd.sas.compute.session+json").
 		SetResult(&resp).
 		Get("/compute/sessions")
@@ -103,10 +101,9 @@ func (c *Client) GetComputeSessionInfo(ctx context.Context, sessionId string) (r
 	ctx, span := tracer.Start(ctx, "GetComputeSessionInfo")
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.compute.session+json, application/vnd.sas.error+json"
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptComputeSession).
 		SetResult(&resp).
 		Get(fmt.Sprintf("/compute/sessions/%s", sessionId))
 	if err != nil {
@@ -131,7 +128,7 @@ func (c *Client) DeleteComputeSession(ctx context.Context, sessionId string) (er
 
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", "application/vnd.sas.error+json").
+		SetHeader("Accept", AcceptErrorOnly).
 		Delete(fmt.Sprintf("/compute/sessions/%s", sessionId))
 	if err != nil {
 		return err
@@ -155,7 +152,7 @@ func (c *Client) GetComputeSessionState(ctx context.Context, sessionId string) (
 
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", "text/plain, application/vnd.sas.error+json").
+		SetHeader("Accept", AcceptTextError).
 		Get(fmt.Sprintf("/compute/sessions/%s/state", sessionId))
 	if err != nil {
 		return "", err
@@ -181,7 +178,7 @@ func (c *Client) SetComputeSessionState(ctx context.Context, sessionId string, s
 
 	req := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", "text/plain, application/vnd.sas.error+json").
+		SetHeader("Accept", AcceptTextError).
 		SetQueryParam("value", state)
 	if ifMatch != "" {
 		req.SetHeader("If-Match", ifMatch)

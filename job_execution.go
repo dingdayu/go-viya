@@ -70,7 +70,7 @@ func (c *Client) SubmitJobExecutionCode(ctx context.Context, req SubmitJobExecut
 
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", "application/json, application/vnd.sas.error+json").
+		SetHeader("Accept", AcceptJSONError).
 		SetContentType("application/json").
 		SetBody(body).
 		SetResult(&resp).
@@ -97,7 +97,7 @@ func (c *Client) GetJobExecutionJob(ctx context.Context, jobID string) (resp Job
 
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", "application/json, application/vnd.sas.error+json").
+		SetHeader("Accept", AcceptJSONError).
 		SetResult(&resp).
 		Get(fmt.Sprintf("/jobExecution/jobs/%s", jobID))
 	if err != nil {
@@ -141,7 +141,7 @@ func (c *Client) CancelJobExecutionJob(ctx context.Context, jobID string) (err e
 
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", "application/vnd.sas.error+json").
+		SetHeader("Accept", AcceptErrorOnly).
 		Delete(fmt.Sprintf("/jobExecution/jobs/%s", jobID))
 	if err != nil {
 		return err
@@ -179,7 +179,7 @@ func (c *Client) GetJobExecutionJobLog(ctx context.Context, jobID string) (strin
 
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", "text/plain, application/octet-stream, application/vnd.sas.error+json").
+		SetHeader("Accept", AcceptJobExecLog).
 		Get(logURI + "/content")
 	if err != nil {
 		return "", err

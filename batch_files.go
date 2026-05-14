@@ -36,10 +36,9 @@ func (c *Client) GetBatchFile(ctx context.Context, fileSetId string) (resp Batch
 	ctx, span := tracer.Start(ctx, "GetBatchFileSetFiles")
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.collection+json;version=2, application/vnd.sas.error+json"
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptCollection).
 		SetResult(&resp).
 		Get(fmt.Sprintf("/batch/fileSets/%s/files", fileSetId))
 	if err != nil {
@@ -62,10 +61,9 @@ func (c *Client) GetBatchFileInfo(ctx context.Context, fileSetId string, fileNam
 	ctx, span := tracer.Start(ctx, "GetBatchFileInfo")
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.batch.file.set.file+json"
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptBatchFile).
 		SetResult(&resp).
 		Get(fmt.Sprintf("/batch/fileSets/%s/files/%s", fileSetId, url.PathEscape(fileName)))
 	if err != nil {
@@ -153,10 +151,9 @@ func (c *Client) uploadBatchFileFromReader(ctx context.Context, fileSetId string
 		return &ErrInvalidParameter{Parameter: "fileSetId", Reason: "must not be empty"}
 	}
 
-	contextAccept := "application/vnd.sas.error+json"
 	resp, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptErrorOnly).
 		SetContentType("application/octet-stream").
 		SetBody(r).
 		Put(fmt.Sprintf("/batch/fileSets/%s/files/%s", fileSetId, url.PathEscape(fileName)))

@@ -37,10 +37,9 @@ func (c *Client) GetComputeContexts(ctx context.Context) (resp ComputeContextsRe
 	ctx, span := tracer.Start(ctx, "GetComputeContexts")
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.collection+json;version=2, application/vnd.sas.error+json"
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptCollection).
 		SetHeader("Accept-Item", "application/vnd.sas.compute.context+json").
 		SetResult(&resp).
 		Get("/compute/contexts")
@@ -64,10 +63,9 @@ func (c *Client) GetComputeContextInfo(ctx context.Context, contextId string) (r
 	ctx, span := tracer.Start(ctx, "GetComputeContextInfo")
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.compute.context+json, application/vnd.sas.error+json"
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptComputeContext).
 		SetResult(&resp).
 		Get(fmt.Sprintf("/compute/contexts/%s", contextId))
 	if err != nil {

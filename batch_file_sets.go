@@ -33,9 +33,8 @@ func (c *Client) GetBatchFileSetsList(ctx context.Context) (resp BatchFileSetsRe
 	ctx, span := tracer.Start(ctx, "GetBatchFileSets")
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.collection+json;version=2, application/vnd.sas.error+json"
 	r, err := c.client.R().
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptCollection).
 		SetContext(ctx).
 		SetResult(&resp).
 		Get("/batch/fileSets")
@@ -59,10 +58,9 @@ func (c *Client) GetBatchFileSetsInfo(ctx context.Context, id string) (resp Batc
 	ctx, span := tracer.Start(ctx, "GetBatchFileSetsInfo")
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.batch.file.set+json, application/vnd.sas.batch.file.set+json;version=1, application/vnd.sas.error+json"
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptBatchFileSet).
 		SetResult(&resp).
 		Get(fmt.Sprintf("/batch/fileSets/%s", id))
 	if err != nil {
@@ -85,10 +83,9 @@ func (c *Client) CreateBatchFileSet(ctx context.Context, contextId string) (resp
 	ctx, span := tracer.Start(ctx, "CreateBatchFileSet")
 	defer span.End()
 
-	contextAccept := "application/json, application/vnd.sas.batch.file.set+json, application/vnd.sas.batch.file.set+json;version=1, application/vnd.sas.error+json"
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptBatchFileSet).
 		SetBody(map[string]any{
 			"contextId": contextId,
 		}).
@@ -118,10 +115,9 @@ func (c *Client) DeleteBatchFileSet(ctx context.Context, fileSetId string) (err 
 	ctx, span := tracer.Start(ctx, "DeleteBatchFileSet")
 	defer span.End()
 
-	contextAccept := "application/vnd.sas.error+json"
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", contextAccept).
+		SetHeader("Accept", AcceptErrorOnly).
 		Delete(fmt.Sprintf("/batch/fileSets/%s", fileSetId))
 	if err != nil {
 		return err

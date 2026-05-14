@@ -51,7 +51,7 @@ func (c *Client) UploadCSVToCASTableFromReader(ctx context.Context, serverID str
 
 	httpResp, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", "application/json, application/vnd.sas.error+json").
+		SetHeader("Accept", AcceptJSONError).
 		SetMultipartFormData(map[string]string{
 			"tableName":         tableName,
 			"format":            "csv",
@@ -90,7 +90,7 @@ func (c *Client) PromoteCASTable(ctx context.Context, serverID string, caslibNam
 
 	httpResp, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", "application/json, application/vnd.sas.error+json").
+		SetHeader("Accept", AcceptJSONError).
 		SetContentType("application/json").
 		SetBody(map[string]any{"scope": "global"}).
 		SetResult(&resp).

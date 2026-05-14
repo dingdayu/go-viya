@@ -74,7 +74,7 @@ func (c *Client) UploadFileFromReader(ctx context.Context, fileName string, cont
 
 	httpResp, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", "application/json, application/vnd.sas.error+json").
+		SetHeader("Accept", AcceptJSONError).
 		SetHeader("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, strings.ReplaceAll(fileName, `"`, `\"`))).
 		SetContentType(contentType).
 		SetBody(r).
@@ -102,7 +102,7 @@ func (c *Client) DownloadFile(ctx context.Context, fileID string) (content []byt
 
 	r, err := c.client.R().
 		SetContext(ctx).
-		SetHeader("Accept", "application/octet-stream, application/vnd.sas.error+json").
+		SetHeader("Accept", AcceptOctetError).
 		Get(fmt.Sprintf("/files/files/%s/content", fileID))
 	if err != nil {
 		return nil, err
