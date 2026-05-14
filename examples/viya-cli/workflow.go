@@ -270,7 +270,9 @@ func runWorkflow(ioStreams cliIO, opts workflowOptions, file string, overrides w
 
 	if !cfg.KeepSession {
 		defer func() {
-			_ = client.DeleteComputeSession(context.Background(), session.ID)
+			cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cleanupCancel()
+			_ = client.DeleteComputeSession(cleanupCtx, session.ID)
 		}()
 	}
 

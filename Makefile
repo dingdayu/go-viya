@@ -7,7 +7,7 @@ vet:
 	go vet ./...
 
 test:
-	go test ./...
+	go test -race -cover ./...
 
 race:
 	go test -race ./...
@@ -15,7 +15,7 @@ race:
 tidy:
 	go mod tidy
 
-check: fmt vet test
+check: fmt tidy vet test
 
 release-check:
 	goreleaser check
