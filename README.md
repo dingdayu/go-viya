@@ -37,28 +37,28 @@ package main
 import (
 	"context"
 	"log"
+	"net/url"
 
 	"github.com/dingdayu/go-viya"
 )
 
 func main() {
 	ctx := context.Background()
-	baseURL := "https://viya.example.com"
+	baseURLStr := "https://viya.example.com"
+	clientID := "client-id"
+	clientSecret := "client-secret"
 
-	tokens, err := viya.NewClientCredentialsTokenProvider(
-		baseURL,
-		"client-id",
-		"client-secret",
-	)
+	baseURL, err := url.Parse(baseURLStr)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	baseURLOpt, err := viya.ParseURL(baseURL)
+	tokens, err := viya.NewClientCredentialsTokenProvider(clientID, clientSecret, baseURL)
 	if err != nil {
 		log.Fatal(err)
 	}
-	client := viya.NewClient(ctx, baseURLOpt, viya.WithTokenProvider(tokens))
+
+	client := viya.NewClient(ctx, viya.WithBaseURL(baseURL), viya.WithTokenProvider(tokens))
 
 	users, err := client.GetIdentitiesUsers(ctx)
 	if err != nil {
@@ -81,17 +81,18 @@ type TokenProvider interface {
 
 Built-in providers:
 
-- `NewClientCredentialsTokenProvider(baseURL, clientID, clientSecret)`
-- `NewPasswordTokenProvider(baseURL, username, password, opts...)`
-- `NewAuthCodeTokenProvider(baseURL, code, opts...)`
+- `NewClientCredentialsTokenProvider(clientID, clientSecret string, baseURL *url.URL)`
+- `NewPasswordTokenProvider(username, password string, baseURL *url.URL, opts ...TokenProviderOption)`
+- `NewAuthCodeTokenProvider(code string, baseURL *url.URL, opts ...TokenProviderOption)`
 
 Password and authorization-code flows can reuse OAuth client settings:
 
 ```go
+baseURL, _ := url.Parse("https://viya.example.com")
 provider, err := viya.NewPasswordTokenProvider(
-	baseURL,
 	"username",
 	"password",
+	baseURL,
 	viya.WithOAuthClient("client-id", "client-secret"),
 )
 ```
