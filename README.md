@@ -224,33 +224,7 @@ go mod tidy
 go test ./...
 ```
 
-## Releases
-
-This project uses semantic versioning and Git tags in the form `vX.Y.Z`.
-
-Create a release by pushing a tag:
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-The release workflow runs tests and then uses GoReleaser to publish a GitHub Release with generated release notes.
-
-For local release validation:
-
-```bash
-goreleaser check
-goreleaser release --snapshot --clean
-```
-
-For Go module compatibility checks before a public release:
-
-```bash
-go run golang.org/x/exp/cmd/gorelease@latest -base=latest
-```
-
-`gorelease` may fail before the first public version exists; after the first tag, use it to catch accidental API breakage.
+For release notes and commit conventions, see [docs/release.md](docs/release.md).
 
 ## License
 
