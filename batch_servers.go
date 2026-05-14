@@ -54,9 +54,9 @@ func (c *Client) GetBatchServersList(ctx context.Context) (resp BatchServersResp
 }
 
 // GetBatchServerInfo returns details for a reusable SAS Viya Batch server.
-func (c *Client) GetBatchServerInfo(ctx context.Context, serverId string) (resp BatchServer, err error) {
-	if serverId == "" {
-		return resp, &ErrInvalidParameter{Parameter: "serverId", Reason: "must not be empty"}
+func (c *Client) GetBatchServerInfo(ctx context.Context, serverID string) (resp BatchServer, err error) {
+	if serverID == "" {
+		return resp, &ErrInvalidParameter{Parameter: "serverID", Reason: "must not be empty"}
 	}
 
 	ctx, span := tracer.Start(ctx, "GetBatchServerInfo")
@@ -66,7 +66,7 @@ func (c *Client) GetBatchServerInfo(ctx context.Context, serverId string) (resp 
 		SetContext(ctx).
 		SetHeader("Accept", AcceptBatchServer).
 		SetResult(&resp).
-		Get(fmt.Sprintf("/batch/servers/%s", serverId))
+		Get(fmt.Sprintf("/batch/servers/%s", serverID))
 	if err != nil {
 		return resp, err
 	}
@@ -79,9 +79,9 @@ func (c *Client) GetBatchServerInfo(ctx context.Context, serverId string) (resp 
 }
 
 // DeleteBatchServer deletes a reusable SAS Viya Batch server.
-func (c *Client) DeleteBatchServer(ctx context.Context, serverId string) (err error) {
-	if serverId == "" {
-		return &ErrInvalidParameter{Parameter: "serverId", Reason: "must not be empty"}
+func (c *Client) DeleteBatchServer(ctx context.Context, serverID string) (err error) {
+	if serverID == "" {
+		return &ErrInvalidParameter{Parameter: "serverID", Reason: "must not be empty"}
 	}
 
 	ctx, span := tracer.Start(ctx, "DeleteBatchServer")
@@ -90,7 +90,7 @@ func (c *Client) DeleteBatchServer(ctx context.Context, serverId string) (err er
 	r, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Accept", AcceptErrorOnly).
-		Delete(fmt.Sprintf("/batch/servers/%s", serverId))
+		Delete(fmt.Sprintf("/batch/servers/%s", serverID))
 	if err != nil {
 		return err
 	}
