@@ -49,6 +49,31 @@ This project follows [Semantic Versioning](https://semver.org/).
 * add tests for UploadFile, GetComputeJobsList, GetIdentitiesUsers, GetConfiguration
 * add t.Helper() to test helpers
 
+## [0.7.0](https://github.com/dingdayu/go-viya/compare/v0.6.0...v0.7.0) (2026-05-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* method parameters renamed for consistency
+* RefreshIdentitiesCache, PatchIdentitiesLDAPUser, and UpdateIdentitiesLDAPObjectFilter now return error instead of (bool, error)
+
+### Features
+
+* add Accept header constants for SAS Viya REST APIs ([2975076](https://github.com/dingdayu/go-viya/commit/2975076e1bc5d6dfc17b77a168a8c6d15e6ff059))
+
+
+### Bug Fixes
+
+* add nil check for baseURL and Accept header ([53c3a92](https://github.com/dingdayu/go-viya/commit/53c3a92a66eb10906054e76c2c3f62a4729ff49b))
+* remove omitempty from JobConditionCode fields ([613c2ed](https://github.com/dingdayu/go-viya/commit/613c2ed449595c63ef832414b285da3ed6d8b8d2))
+* remove redundant parameter validation in uploadBatchFileFromReader ([23d0ad4](https://github.com/dingdayu/go-viya/commit/23d0ad4a9c740267814cb06e30f7c94c0bf02763))
+
+
+### Code Refactoring
+
+* rename jobId to jobID in batch jobs ([50d329e](https://github.com/dingdayu/go-viya/commit/50d329e79cb75c30ca7d23ea740fa3b5fda2ff86))
+* simplify identities API to return error only ([2dc9dee](https://github.com/dingdayu/go-viya/commit/2dc9deee39aa98581b766e5a27d1a16354465473))
+
 ## [0.6.0](https://github.com/dingdayu/go-viya/compare/v0.5.0...v0.6.0) (2026-05-11)(https://github.com/dingdayu/go-viya/compare/v0.5.0...v0.6.0) (2026-05-11)
 
 
