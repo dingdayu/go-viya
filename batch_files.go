@@ -147,10 +147,6 @@ func (c *Client) UploadBatchFileFromReader(ctx context.Context, fileSetId string
 }
 
 func (c *Client) uploadBatchFileFromReader(ctx context.Context, fileSetId string, fileName string, r io.Reader) (err error) {
-	if fileSetId == "" {
-		return &ErrInvalidParameter{Parameter: "fileSetId", Reason: "must not be empty"}
-	}
-
 	resp, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Accept", AcceptErrorOnly).
