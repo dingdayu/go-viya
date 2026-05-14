@@ -4,13 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"sync"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
@@ -28,10 +25,6 @@ type ErrInvalidParameter struct {
 
 func (e *ErrInvalidParameter) Error() string {
 	return fmt.Sprintf("invalid parameter %s: %s", e.Parameter, e.Reason)
-}
-
-func (e *ErrInvalidParameter) Unwrap() error {
-	return nil
 }
 
 // TokenProvider supplies bearer tokens for authenticated SAS Viya requests.
@@ -87,7 +80,6 @@ type ClientCredentialsTokenProvider struct {
 	baseURL      *url.URL
 	clientID     string
 	clientSecret string
-	httpClient   *http.Client
 
 	mu    sync.Mutex
 	token *oauth2.Token
@@ -97,30 +89,16 @@ func (p *ClientCredentialsTokenProvider) tokenURL() string {
 	return p.baseURL.String() + "/SASLogon/oauth/token"
 }
 
-func newTokenHTTPClient(capture bool) *http.Client {
-	return &http.Client{
-		Transport: otelhttp.NewTransport(
-			http.DefaultTransport,
-			otelhttp.WithSpanOptions(trace.WithAttributes(
-				attribute.Bool("http.request.body.capture", capture),
-			)),
-		),
-	}
-}
-
-func (p *ClientCredentialsTokenProvider) tokenContext(ctx context.Context) context.Context {
-	if p.httpClient == nil {
-		return ctx
-	}
-	return context.WithValue(ctx, oauth2.HTTPClient, p.httpClient)
-}
-
 // Token returns a bearer token from SAS Logon, refreshing the cached token as needed.
 func (p *ClientCredentialsTokenProvider) Token(ctx context.Context) (string, error) {
+	ctx, span := tracer.Start(ctx, "ClientCredentialsTokenProvider.Token")
+	defer span.End()
+
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	if p.token.Valid() {
+		span.SetAttributes(attribute.Bool("token.cached", true))
 		return p.token.AccessToken, nil
 	}
 
@@ -130,11 +108,13 @@ func (p *ClientCredentialsTokenProvider) Token(ctx context.Context) (string, err
 		TokenURL:     p.tokenURL(),
 		AuthStyle:    oauth2.AuthStyleAutoDetect,
 	}
-	tok, err := oauthCfg.Token(p.tokenContext(ctx))
+	tok, err := oauthCfg.Token(ctx)
 	if err != nil {
+		span.RecordError(err)
 		return "", fmt.Errorf("%w: %v", ErrViyaAuthFailed, err)
 	}
 	if tok == nil || tok.AccessToken == "" {
+		span.RecordError(ErrViyaAuthFailed)
 		return "", ErrViyaAuthFailed
 	}
 
@@ -153,10 +133,14 @@ type PasswordTokenProvider struct {
 
 // Token returns a bearer token for the configured username and password, refreshing the cached token as needed.
 func (p *PasswordTokenProvider) Token(ctx context.Context) (string, error) {
+	ctx, span := tracer.Start(ctx, "PasswordTokenProvider.Token")
+	defer span.End()
+
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	if p.token.Valid() {
+		span.SetAttributes(attribute.Bool("token.cached", true))
 		return p.token.AccessToken, nil
 	}
 
@@ -169,20 +153,21 @@ func (p *PasswordTokenProvider) Token(ctx context.Context) (string, error) {
 		},
 	}
 
-	tokenCtx := p.tokenContext(ctx)
 	var (
 		tok *oauth2.Token
 		err error
 	)
 	if p.token == nil {
-		tok, err = conf.PasswordCredentialsToken(tokenCtx, p.username, p.password)
+		tok, err = conf.PasswordCredentialsToken(ctx, p.username, p.password)
 	} else {
-		tok, err = conf.TokenSource(tokenCtx, p.token).Token()
+		tok, err = conf.TokenSource(ctx, p.token).Token()
 	}
 	if err != nil {
+		span.RecordError(err)
 		return "", fmt.Errorf("%w: %v", ErrViyaAuthFailed, err)
 	}
 	if tok == nil || tok.AccessToken == "" {
+		span.RecordError(ErrViyaAuthFailed)
 		return "", ErrViyaAuthFailed
 	}
 
@@ -198,10 +183,14 @@ type AuthCodeTokenProvider struct {
 
 // Token exchanges the configured authorization code for a bearer token, then refreshes the cached token as needed.
 func (p *AuthCodeTokenProvider) Token(ctx context.Context) (string, error) {
+	ctx, span := tracer.Start(ctx, "AuthCodeTokenProvider.Token")
+	defer span.End()
+
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	if p.token.Valid() {
+		span.SetAttributes(attribute.Bool("token.cached", true))
 		return p.token.AccessToken, nil
 	}
 
@@ -214,20 +203,21 @@ func (p *AuthCodeTokenProvider) Token(ctx context.Context) (string, error) {
 		},
 	}
 
-	tokenCtx := p.tokenContext(ctx)
 	var (
 		tok *oauth2.Token
 		err error
 	)
 	if p.token == nil {
-		tok, err = conf.Exchange(tokenCtx, p.code)
+		tok, err = conf.Exchange(ctx, p.code)
 	} else {
-		tok, err = conf.TokenSource(tokenCtx, p.token).Token()
+		tok, err = conf.TokenSource(ctx, p.token).Token()
 	}
 	if err != nil {
+		span.RecordError(err)
 		return "", fmt.Errorf("%w: %v", ErrViyaAuthFailed, err)
 	}
 	if tok == nil || tok.AccessToken == "" {
+		span.RecordError(ErrViyaAuthFailed)
 		return "", ErrViyaAuthFailed
 	}
 
@@ -254,7 +244,6 @@ func newCredentialBase(options tokenProviderOptions, requireSecret bool) (*Clien
 		baseURL:      baseURL,
 		clientID:     clientID,
 		clientSecret: clientSecret,
-		httpClient:   newTokenHTTPClient(false),
 	}, nil
 }
 
