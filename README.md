@@ -3,6 +3,7 @@
 [![CI](https://github.com/dingdayu/go-viya/actions/workflows/ci.yml/badge.svg)](https://github.com/dingdayu/go-viya/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/dingdayu/go-viya.svg)](https://pkg.go.dev/github.com/dingdayu/go-viya)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dingdayu/go-viya)](https://goreportcard.com/report/github.com/dingdayu/go-viya)
+[![中文文档](https://img.shields.io/badge/docs-中文-blue)](README.zh.md)
 
 `go-viya` is a Go client library for selected SAS Viya REST APIs. It follows the REST protocols and media types documented at <https://developer.sas.com/rest-apis>, and provides token providers, a Resty-backed client, and helpers for identities, configuration, batch, CAS table operations, files, and Job Execution jobs.
 
@@ -150,7 +151,45 @@ See `examples/` for complete custom provider and workflow examples.
 - `examples/default-client`: configure and retrieve the process-wide default client.
 - `examples/batch-job`: create a file set, upload a SAS program, submit a batch job, and wait for completion.
 - `examples/cas-table-state`: load and optionally unload a CAS table.
-- `examples/viya-cli`: CLI for agents to execute SAS code, discover and manage CAS data, use Viya files, and submit Job Execution jobs.
+- [`examples/viya-cli`](#viya-cli): CLI for agents to execute SAS code, discover and manage CAS data, use Viya files, and submit Job Execution jobs.
+
+### viya-cli
+
+`viya-cli` is a CLI tool for executing SAS code on SAS Viya, discovering and managing
+CAS data assets, using the Viya Files Service, submitting Job Execution jobs, and
+orchestrating Compute-based workflow plans. It is designed for agent frameworks,
+CI/CD pipelines, and interactive use.
+
+```bash
+# Install from repository root
+go install ./examples/viya-cli
+
+# Run SAS code inline
+viya-cli run --code "data _null_; put 'hello from viya-cli'; run;"
+
+# Run a local SAS program
+viya-cli run --file ./program.sas
+
+# Keep the Compute session after execution
+viya-cli run --file ./program.sas --keep-session
+
+# Discover CAS servers
+viya-cli cas servers
+
+# List Viya files
+viya-cli files list --limit 50
+
+# Submit a Job Execution job
+viya-cli jobs submit --code "proc options; run;" --name options-check
+
+# Validate and run a workflow plan
+viya-cli workflow validate --file ./examples/workflow.yaml
+viya-cli workflow run --file ./examples/workflow.yaml -o json
+```
+
+Use `-o json` for machine-readable output. See
+[examples/viya-cli/README.md](examples/viya-cli/README.md) for complete
+documentation, configuration, and agent integration guidance.
 
 ## API Basis
 

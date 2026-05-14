@@ -1,5 +1,7 @@
 # viya-cli
 
+[![中文文档](https://img.shields.io/badge/docs-中文-blue)](README.zh.md)
+
 `viya-cli` is a small CLI example for agent frameworks that need to execute SAS
 code on SAS Viya, discover and manage CAS data assets, use Viya files, submit
 asynchronous Job Execution jobs, and orchestrate Compute-based workflow plans.
