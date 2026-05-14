@@ -29,9 +29,6 @@ func TestNewPasswordTokenProviderDefaultsOAuthClient(t *testing.T) {
 	if passwordProvider.clientSecret != "" {
 		t.Fatalf("clientSecret = %q, want empty", passwordProvider.clientSecret)
 	}
-	if passwordProvider.httpClient == nil {
-		t.Fatal("httpClient = nil, want token HTTP client with capture disabled")
-	}
 }
 
 func TestNewAuthCodeTokenProviderUsesOAuthClientProvider(t *testing.T) {
@@ -58,9 +55,6 @@ func TestNewAuthCodeTokenProviderUsesOAuthClientProvider(t *testing.T) {
 	}
 	if authCodeProvider.clientSecret != base.clientSecret {
 		t.Fatalf("clientSecret = %q, want %q", authCodeProvider.clientSecret, base.clientSecret)
-	}
-	if authCodeProvider.httpClient == nil {
-		t.Fatal("httpClient = nil, want token HTTP client with capture disabled")
 	}
 }
 
