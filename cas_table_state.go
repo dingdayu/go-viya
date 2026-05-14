@@ -39,6 +39,7 @@ func (c *Client) LoadCASTableToMemory(ctx context.Context, serverID string, casl
 
 	resp, err := c.client.R().
 		SetContext(ctx).
+		SetHeader("Accept", AcceptJSONError).
 		SetQueryParam("value", "loaded").
 		SetBody(body).
 		Put(fmt.Sprintf("/casManagement/servers/%s/caslibs/%s/tables/%s/state", serverID, url.PathEscape(caslibName), url.PathEscape(tableName)))
@@ -74,6 +75,7 @@ func (c *Client) UnloadCASTableFromMemory(ctx context.Context, serverID string, 
 
 	resp, err := c.client.R().
 		SetContext(ctx).
+		SetHeader("Accept", AcceptJSONError).
 		SetQueryParam("value", "unloaded").
 		Put(fmt.Sprintf("/casManagement/servers/%s/caslibs/%s/tables/%s/state", serverID, url.PathEscape(caslibName), url.PathEscape(tableName)))
 	if err != nil {

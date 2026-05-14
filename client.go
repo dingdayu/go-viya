@@ -93,6 +93,9 @@ func NewClient(ctx context.Context, opts ...Option) *Client {
 		}
 	}
 
+	if cfg.baseURL == nil {
+		panic("viya: WithBaseURL option is required")
+	}
 	client := resty.New().SetBaseURL(cfg.baseURL.String())
 	if cfg.rt != nil {
 		client.SetTransport(cfg.rt)
