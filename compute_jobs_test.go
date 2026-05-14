@@ -115,6 +115,37 @@ func TestCancelComputeJobSendsIfMatch(t *testing.T) {
 	}
 }
 
+func TestGetComputeJobsLists(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.Method, http.MethodGet; got != want {
+			t.Fatalf("method = %q, want %q", got, want)
+		}
+		if got, want := r.RequestURI, "/compute/sessions/session-1/jobs"; got != want {
+			t.Fatalf("request URI = %q, want %q", got, want)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"count":1,"items":[{"id":"job-1","sessionId":"session-1","state":"completed"}]}`))
+	}))
+	defer server.Close()
+
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(t.Context(), WithBaseURL(u))
+
+	resp, err := client.GetComputeJobsList(t.Context(), "session-1")
+	if err != nil {
+		t.Fatalf("GetComputeJobsList() error = %v", err)
+	}
+	if got, want := resp.Count, 1; got != want {
+		t.Fatalf("Count = %d, want %d", got, want)
+	}
+	if len(resp.Items) != 1 {
+		t.Fatalf("len(Items) = %d, want 1", len(resp.Items))
+	}
+}
+
 func TestGetComputeJobStateReturnsStatusError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"message":"missing job"}`, http.StatusNotFound)

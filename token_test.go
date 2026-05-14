@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -118,5 +119,47 @@ func TestClientCredentialsTokenProviderRefreshUsesCurrentContext(t *testing.T) {
 	}
 	if got := atomic.LoadInt32(&requests); got != 2 {
 		t.Fatalf("token requests = %d, want 2", got)
+	}
+}
+
+func TestClientCredentialsTokenConcurrentAccess(t *testing.T) {
+	var requests int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&requests, 1)
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(map[string]any{
+			"access_token": "concurrent-token",
+			"token_type":   "bearer",
+			"expires_in":   3600,
+		}); err != nil {
+			t.Errorf("encode token response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	serverURL, _ := url.Parse(server.URL)
+	provider, err := NewClientCredentialsTokenProvider("client-id", "client-secret", serverURL)
+	if err != nil {
+		t.Fatalf("NewClientCredentialsTokenProvider() error = %v", err)
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			token, err := provider.Token(t.Context())
+			if err != nil {
+				t.Errorf("Token() error = %v", err)
+			}
+			if token != "concurrent-token" {
+				t.Errorf("Token() = %q, want concurrent-token", token)
+			}
+		}()
+	}
+	wg.Wait()
+
+	if got := atomic.LoadInt32(&requests); got != 1 {
+		t.Fatalf("token requests = %d, want 1 (concurrent callers should share one token)", got)
 	}
 }

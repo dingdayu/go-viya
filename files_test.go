@@ -118,6 +118,34 @@ func TestDownloadFileEscapesIDAndReturnsBytes(t *testing.T) {
 	}
 }
 
+func TestUploadFileSendsContent(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.Method, http.MethodPost; got != want {
+			t.Fatalf("method = %q, want %q", got, want)
+		}
+		if got, want := r.Header.Get("Content-Type"), "text/plain"; got != want {
+			t.Fatalf("Content-Type = %q, want %q", got, want)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"file-1","name":"test.txt"}`))
+	}))
+	defer server.Close()
+
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(t.Context(), WithBaseURL(u))
+
+	file, err := client.UploadFile(t.Context(), "test.txt", "text/plain", []byte("content"))
+	if err != nil {
+		t.Fatalf("UploadFile() error = %v", err)
+	}
+	if got, want := file.Name, "test.txt"; got != want {
+		t.Fatalf("Name = %q, want %q", got, want)
+	}
+}
+
 func TestDownloadFileReturnsStatusError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"message":"missing"}`, http.StatusNotFound)
