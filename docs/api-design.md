@@ -28,6 +28,10 @@ When adding endpoint helpers:
   response body (the boolean pattern was removed in v0.7.0 — callers check
   `err != nil` only). For resource-returning operations, use the standard
   `(resp Type, err error)` named return pattern.
+- Use `ID` suffix for identifier parameters to follow Go naming conventions:
+  `jobID`, `serverID`, `contextID`, `sessionID`, `fileID` instead of `jobId`,
+  `serverId`, `contextId`, `sessionId`, `fileId`. Internal helper method parameters
+  may use shorter names when the scope is obvious.
 - Return clear operation context in errors and include HTTP status where useful.
 - Decode stable responses into typed structs.
 - Use `map[string]any` only for dynamic configuration or intentionally open-ended

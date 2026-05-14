@@ -63,5 +63,7 @@ This repository is intentionally narrow in scope: it is not a generated client f
   Use them instead of inline strings when adding new endpoint helpers.
 - State-changing operations that return no resource body should return `error`
   only (not `(bool, error)`). Error-only signaling was standardized in v0.7.0.
+- Identifier parameters use `ID` suffix: `jobID`, `serverID`, `contextID`,
+  `sessionID`, `fileID` (not `jobId`, `serverId`, etc.).
 - New tests should use `github.com/stretchr/testify` for assertions and
   `t.Parallel()` for httptest-based tests where possible.
