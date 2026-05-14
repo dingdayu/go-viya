@@ -44,9 +44,9 @@ type CreateComputeSessionRequest struct {
 }
 
 // CreateComputeSession creates a Compute session from the specified context definition.
-func (c *Client) CreateComputeSession(ctx context.Context, contextId string, req CreateComputeSessionRequest) (resp ComputeSession, err error) {
-	if contextId == "" {
-		return resp, &ErrInvalidParameter{Parameter: "contextId", Reason: "must not be empty"}
+func (c *Client) CreateComputeSession(ctx context.Context, contextID string, req CreateComputeSessionRequest) (resp ComputeSession, err error) {
+	if contextID == "" {
+		return resp, &ErrInvalidParameter{Parameter: "contextID", Reason: "must not be empty"}
 	}
 
 	ctx, span := tracer.Start(ctx, "CreateComputeSession")
@@ -58,7 +58,7 @@ func (c *Client) CreateComputeSession(ctx context.Context, contextId string, req
 		SetContentType("application/json").
 		SetBody(req).
 		SetResult(&resp).
-		Post(fmt.Sprintf("/compute/contexts/%s/sessions", contextId))
+		Post(fmt.Sprintf("/compute/contexts/%s/sessions", contextID))
 	if err != nil {
 		return resp, err
 	}

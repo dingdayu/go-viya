@@ -55,9 +55,9 @@ func (c *Client) GetComputeContexts(ctx context.Context) (resp ComputeContextsRe
 }
 
 // GetComputeContextInfo returns a single SAS Viya Compute context definition.
-func (c *Client) GetComputeContextInfo(ctx context.Context, contextId string) (resp ComputeContext, err error) {
-	if contextId == "" {
-		return resp, &ErrInvalidParameter{Parameter: "contextId", Reason: "must not be empty"}
+func (c *Client) GetComputeContextInfo(ctx context.Context, contextID string) (resp ComputeContext, err error) {
+	if contextID == "" {
+		return resp, &ErrInvalidParameter{Parameter: "contextID", Reason: "must not be empty"}
 	}
 
 	ctx, span := tracer.Start(ctx, "GetComputeContextInfo")
@@ -67,7 +67,7 @@ func (c *Client) GetComputeContextInfo(ctx context.Context, contextId string) (r
 		SetContext(ctx).
 		SetHeader("Accept", AcceptComputeContext).
 		SetResult(&resp).
-		Get(fmt.Sprintf("/compute/contexts/%s", contextId))
+		Get(fmt.Sprintf("/compute/contexts/%s", contextID))
 	if err != nil {
 		return resp, err
 	}
