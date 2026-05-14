@@ -45,7 +45,7 @@ type runResult struct {
 	SessionID        string   `json:"sessionId,omitempty"`
 	JobID            string   `json:"jobId,omitempty"`
 	State            string   `json:"state,omitempty"`
-	JobConditionCode int      `json:"jobConditionCode,omitempty"`
+	JobConditionCode int      `json:"jobConditionCode"`
 	Log              string   `json:"log,omitempty"`
 	Listing          string   `json:"listing,omitempty"`
 	Warnings         []string `json:"warnings,omitempty"`

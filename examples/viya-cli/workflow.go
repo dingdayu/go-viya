@@ -112,7 +112,7 @@ type workflowNodeResult struct {
 	SessionID        string               `json:"sessionId,omitempty"`
 	JobID            string               `json:"jobId,omitempty"`
 	State            string               `json:"state,omitempty"`
-	JobConditionCode int                  `json:"jobConditionCode,omitempty"`
+	JobConditionCode int                  `json:"jobConditionCode"`
 	LogPath          string               `json:"logPath,omitempty"`
 	ListingPath      string               `json:"listingPath,omitempty"`
 	Warnings         []string             `json:"warnings,omitempty"`
@@ -302,7 +302,7 @@ type computeJobOptions struct {
 type computeJobResult struct {
 	JobID            string   `json:"jobId,omitempty"`
 	State            string   `json:"state,omitempty"`
-	JobConditionCode int      `json:"jobConditionCode,omitempty"`
+	JobConditionCode int      `json:"jobConditionCode"`
 	Log              string   `json:"log,omitempty"`
 	Listing          string   `json:"listing,omitempty"`
 	Warnings         []string `json:"warnings,omitempty"`
