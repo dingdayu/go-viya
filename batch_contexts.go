@@ -1,3 +1,6 @@
+// Package viya provides a client library for selected SAS Viya REST APIs,
+// including authentication, identities, configuration, batch, CAS, files,
+// compute, and job execution.
 package viya
 
 import (

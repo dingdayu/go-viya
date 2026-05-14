@@ -144,7 +144,7 @@ func TestClientCredentialsTokenConcurrentAccess(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

@@ -10,7 +10,7 @@ linters:
     rules:
       - linters:
           - errcheck
-        text: "Error return value of `(os\\.|.*\.Write|.*\.Close|.*\.Body\\.Close|fmt\\.Fprint)`"
+        text: 'Error return value of `(os\.|.*\.Write|.*\.Close|.*\.Body\.Close|fmt\.Fprint)`'
       - linters:
           - errorlint
         text: "non-wrapping format verb for fmt.Errorf"
