@@ -11,6 +11,7 @@ import (
 )
 
 func TestCreateComputeJobSendsCode(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got, want := r.Method, http.MethodPost; got != want {
 			t.Fatalf("method = %q, want %q", got, want)
