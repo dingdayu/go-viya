@@ -1,5 +1,37 @@
 package viya
 
+// Accept header constants for SAS Viya REST API requests.
+// These values are used across endpoint helpers to ensure consistent
+// media type negotiation with the SAS Viya REST services.
+const (
+	// Common Accept header patterns.
+	AcceptJSON        = "application/json"
+	AcceptOctetStream = "application/octet-stream"
+	AcceptTextPlain   = "text/plain"
+	AcceptSASError    = "application/vnd.sas.error+json"
+
+	// Combined Accept header values.
+	AcceptJSONError  = AcceptJSON + ", " + AcceptSASError
+	AcceptOctetError = AcceptOctetStream + ", " + AcceptSASError
+	AcceptTextError  = AcceptTextPlain + ", " + AcceptSASError
+	AcceptErrorOnly  = AcceptSASError
+	AcceptCollection = AcceptJSON + ", application/vnd.sas.collection+json;version=2, " + AcceptSASError
+	AcceptJobExecLog = AcceptTextPlain + ", " + AcceptOctetStream + ", " + AcceptSASError
+
+	// Compute API Accept headers.
+	AcceptComputeContext = AcceptJSON + ", application/vnd.sas.compute.context+json, " + AcceptSASError
+	AcceptComputeSession = AcceptJSON + ", application/vnd.sas.compute.session+json, " + AcceptSASError
+	AcceptComputeJob     = AcceptJSON + ", application/vnd.sas.compute.job+json, " + AcceptSASError
+
+	// Batch API Accept headers.
+	AcceptBatchContext  = AcceptJSON + ", application/vnd.sas.batch.context+json, " + AcceptSASError
+	AcceptBatchFileSet  = AcceptJSON + ", application/vnd.sas.batch.file.set+json, application/vnd.sas.batch.file.set+json;version=1, " + AcceptSASError
+	AcceptBatchFile     = AcceptJSON + ", application/vnd.sas.batch.file.set.file+json"
+	AcceptBatchServer   = AcceptJSON + ", application/vnd.sas.batch.server+json, " + AcceptSASError
+	AcceptBatchJob      = AcceptJSON + ", application/vnd.sas.batch.job+json, application/vnd.sas.batch.job+json;version=1, " + AcceptSASError
+	AcceptBatchJobState = AcceptJSON + ", application/vnd.sas.batch.job.state+json, application/vnd.sas.batch.job.state+json;version=1, application/vnd.sas.batch.job+json, application/vnd.sas.batch.job+json;version=1, " + AcceptSASError
+)
+
 // Link describes a hypermedia link returned by SAS Viya REST APIs.
 //
 // Many SAS Viya resources include action links such as "self", "update", or
