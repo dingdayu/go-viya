@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+
+	"go.opentelemetry.io/otel/codes"
 )
 
 // SAS Viya CAS Management API reference:
@@ -25,6 +27,9 @@ func (c *Client) LoadCASTableToMemory(ctx context.Context, serverID string, casl
 		return &ErrInvalidParameter{Parameter: "tableName", Reason: "must not be empty"}
 	}
 
+	ctx, span := tracer.Start(ctx, "LoadCASTableToMemory")
+	defer span.End()
+
 	body := map[string]any{
 		"outputCaslibName": caslibName,
 		"outputTableName":  tableName,
@@ -38,10 +43,12 @@ func (c *Client) LoadCASTableToMemory(ctx context.Context, serverID string, casl
 		SetBody(body).
 		Put(fmt.Sprintf("/casManagement/servers/%s/caslibs/%s/tables/%s/state", serverID, url.PathEscape(caslibName), url.PathEscape(tableName)))
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
 
 	if !resp.IsSuccess() {
+		span.SetStatus(codes.Error, resp.String())
 		return fmt.Errorf("failed to load CAS table to memory, status code: %d", resp.StatusCode())
 	}
 	return nil
@@ -62,15 +69,20 @@ func (c *Client) UnloadCASTableFromMemory(ctx context.Context, serverID string, 
 		return &ErrInvalidParameter{Parameter: "tableName", Reason: "must not be empty"}
 	}
 
+	ctx, span := tracer.Start(ctx, "UnloadCASTableFromMemory")
+	defer span.End()
+
 	resp, err := c.client.R().
 		SetContext(ctx).
 		SetQueryParam("value", "unloaded").
 		Put(fmt.Sprintf("/casManagement/servers/%s/caslibs/%s/tables/%s/state", serverID, url.PathEscape(caslibName), url.PathEscape(tableName)))
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
 
 	if !resp.IsSuccess() {
+		span.SetStatus(codes.Error, resp.String())
 		return fmt.Errorf("failed to unload CAS table from memory, status code: %d, body: %s", resp.StatusCode(), resp.String())
 	}
 	return nil
