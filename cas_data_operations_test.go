@@ -1,7 +1,6 @@
 package viya
 
 import (
-	"context"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -51,9 +50,9 @@ func TestUploadCSVToCASTableFromReaderSendsMultipart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
+	client := NewClient(t.Context(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
 
-	table, err := client.UploadCSVToCASTableFromReader(context.Background(), "server 1", "Public Data", "class table", strings.NewReader(csv))
+	table, err := client.UploadCSVToCASTableFromReader(t.Context(), "server 1", "Public Data", "class table", strings.NewReader(csv))
 	if err != nil {
 		t.Fatalf("UploadCSVToCASTableFromReader() error = %v", err)
 	}
@@ -75,9 +74,9 @@ func TestUploadCSVToCASTableReturnsConflictStatusError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	_, err = client.UploadCSVToCASTable(context.Background(), "server-1", "Public", "class", []byte("x\n"))
+	_, err = client.UploadCSVToCASTable(t.Context(), "server-1", "Public", "class", []byte("x\n"))
 	if err == nil {
 		t.Fatal("UploadCSVToCASTable() error = nil, want error")
 	}
@@ -110,9 +109,9 @@ func TestPromoteCASTableSendsScopeBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	table, err := client.PromoteCASTable(context.Background(), "server 1", "Public Data", "class table")
+	table, err := client.PromoteCASTable(t.Context(), "server 1", "Public Data", "class table")
 	if err != nil {
 		t.Fatalf("PromoteCASTable() error = %v", err)
 	}
@@ -131,9 +130,9 @@ func TestPromoteCASTableReturnsStatusError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	_, err = client.PromoteCASTable(context.Background(), "server-1", "Public", "missing")
+	_, err = client.PromoteCASTable(t.Context(), "server-1", "Public", "missing")
 	if err == nil {
 		t.Fatal("PromoteCASTable() error = nil, want error")
 	}

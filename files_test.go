@@ -1,7 +1,6 @@
 package viya
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -40,9 +39,9 @@ func TestGetFilesSetsPagingFilterAndAuth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
+	client := NewClient(t.Context(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
 
-	files, err := client.GetFiles(context.Background(), FileListOptions{Start: 2, Limit: 7, FilterName: "report"})
+	files, err := client.GetFiles(t.Context(), FileListOptions{Start: 2, Limit: 7, FilterName: "report"})
 	if err != nil {
 		t.Fatalf("GetFiles() error = %v", err)
 	}
@@ -84,9 +83,9 @@ func TestUploadFileFromReaderSendsHeadersAndBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	file, err := client.UploadFileFromReader(context.Background(), "report.txt", "text/plain", strings.NewReader(body))
+	file, err := client.UploadFileFromReader(t.Context(), "report.txt", "text/plain", strings.NewReader(body))
 	if err != nil {
 		t.Fatalf("UploadFileFromReader() error = %v", err)
 	}
@@ -108,9 +107,9 @@ func TestDownloadFileEscapesIDAndReturnsBytes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	content, err := client.DownloadFile(context.Background(), "file 1")
+	content, err := client.DownloadFile(t.Context(), "file 1")
 	if err != nil {
 		t.Fatalf("DownloadFile() error = %v", err)
 	}
@@ -129,9 +128,9 @@ func TestDownloadFileReturnsStatusError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	_, err = client.DownloadFile(context.Background(), "missing")
+	_, err = client.DownloadFile(t.Context(), "missing")
 	if err == nil {
 		t.Fatal("DownloadFile() error = nil, want error")
 	}

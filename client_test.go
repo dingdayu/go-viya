@@ -27,9 +27,9 @@ func TestNewClientSetsBearerAuthorizationHeader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
+	client := NewClient(t.Context(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
 
-	resp, err := client.client.R().SetContext(context.Background()).Get("/")
+	resp, err := client.client.R().SetContext(t.Context()).Get("/")
 	if err != nil {
 		t.Fatalf("GET error = %v", err)
 	}

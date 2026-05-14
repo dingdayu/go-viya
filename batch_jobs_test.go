@@ -48,9 +48,9 @@ func TestSendBatchJobInputSendsLines(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	err = client.SendBatchJobInput(context.Background(), "job 1", []string{"first\n", "second\n"})
+	err = client.SendBatchJobInput(t.Context(), "job 1", []string{"first\n", "second\n"})
 	if err != nil {
 		t.Fatalf("SendBatchJobInput() error = %v", err)
 	}
@@ -77,9 +77,9 @@ func TestGetBatchJobOutputDecodesOutput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	output, err := client.GetBatchJobOutput(context.Background(), "job-1")
+	output, err := client.GetBatchJobOutput(t.Context(), "job-1")
 	if err != nil {
 		t.Fatalf("GetBatchJobOutput() error = %v", err)
 	}
@@ -115,9 +115,9 @@ func TestGetBatchJobStateReturnsPlainTextState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	state, err := client.GetBatchJobState(context.Background(), "job-1")
+	state, err := client.GetBatchJobState(t.Context(), "job-1")
 	if err != nil {
 		t.Fatalf("GetBatchJobState() error = %v", err)
 	}
@@ -149,9 +149,9 @@ func TestCancelBatchJobSetsCanceledState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	err = client.CancelBatchJob(context.Background(), "job-1")
+	err = client.CancelBatchJob(t.Context(), "job-1")
 	if err != nil {
 		t.Fatalf("CancelBatchJob() error = %v", err)
 	}
@@ -180,9 +180,9 @@ func TestWaitBatchJobCompletedReturnsFinalJobDetails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	jobInfo, err := client.WaitBatchJobCompleted(context.Background(), "job-1", time.Millisecond)
+	jobInfo, err := client.WaitBatchJobCompleted(t.Context(), "job-1", time.Millisecond)
 	if err != nil {
 		t.Fatalf("WaitBatchJobCompleted() error = %v", err)
 	}
@@ -222,9 +222,9 @@ func TestWaitBatchJobCompletedReturnsMostRecentJobOnError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	jobInfo, err := client.WaitBatchJobCompleted(context.Background(), "job-1", time.Millisecond)
+	jobInfo, err := client.WaitBatchJobCompleted(t.Context(), "job-1", time.Millisecond)
 	if err == nil {
 		t.Fatal("WaitBatchJobCompleted() error = nil, want error")
 	}
@@ -251,8 +251,8 @@ func TestWaitBatchJobCompletedReturnsContextError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
-	ctx, cancel := context.WithCancel(context.Background())
+	client := NewClient(t.Context(), WithBaseURL(u))
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
 	jobInfo, err := client.WaitBatchJobCompleted(ctx, "job-1", time.Hour)

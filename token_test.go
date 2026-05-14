@@ -99,7 +99,7 @@ func TestClientCredentialsTokenProviderRefreshUsesCurrentContext(t *testing.T) {
 		t.Fatalf("NewClientCredentialsTokenProvider() error = %v", err)
 	}
 
-	firstCtx, cancel := context.WithCancel(context.Background())
+	firstCtx, cancel := context.WithCancel(t.Context())
 	token, err := provider.Token(firstCtx)
 	if err != nil {
 		t.Fatalf("Token(firstCtx) error = %v", err)
@@ -113,7 +113,7 @@ func TestClientCredentialsTokenProviderRefreshUsesCurrentContext(t *testing.T) {
 	provider.token.Expiry = time.Now().Add(-time.Hour)
 	provider.mu.Unlock()
 
-	secondCtx, secondCancel := context.WithTimeout(context.Background(), time.Second)
+	secondCtx, secondCancel := context.WithTimeout(t.Context(), time.Second)
 	defer secondCancel()
 	token, err = provider.Token(secondCtx)
 	if err != nil {

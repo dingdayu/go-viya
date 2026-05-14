@@ -1,7 +1,6 @@
 package viya
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -38,9 +37,9 @@ func TestCreateComputeJobSendsCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	job, err := client.CreateComputeJob(context.Background(), "session 1", CreateComputeJobRequest{
+	job, err := client.CreateComputeJob(t.Context(), "session 1", CreateComputeJobRequest{
 		Code: []string{"data _null_;", "run;"},
 	})
 	if err != nil {
@@ -66,9 +65,9 @@ func TestGetComputeJobsListDecodesJobs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	jobs, err := client.GetComputeJobsList(context.Background(), "session-1")
+	jobs, err := client.GetComputeJobsList(t.Context(), "session-1")
 	if err != nil {
 		t.Fatalf("GetComputeJobsList() error = %v", err)
 	}
@@ -104,9 +103,9 @@ func TestCancelComputeJobSendsIfMatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	state, err := client.CancelComputeJob(context.Background(), "session-1", "0", `"job-etag"`)
+	state, err := client.CancelComputeJob(t.Context(), "session-1", "0", `"job-etag"`)
 	if err != nil {
 		t.Fatalf("CancelComputeJob() error = %v", err)
 	}
@@ -125,9 +124,9 @@ func TestGetComputeJobStateReturnsStatusError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	_, err = client.GetComputeJobState(context.Background(), "session-1", "0")
+	_, err = client.GetComputeJobState(t.Context(), "session-1", "0")
 	if err == nil {
 		t.Fatal("GetComputeJobState() error = nil, want error")
 	}

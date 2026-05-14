@@ -1,7 +1,6 @@
 package viya
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -44,9 +43,9 @@ func TestLoadCASTableToMemorySetsLoadedState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	err = client.LoadCASTableToMemory(context.Background(), "server 1", "Public Data", "class table", true, "global")
+	err = client.LoadCASTableToMemory(t.Context(), "server 1", "Public Data", "class table", true, "global")
 	if err != nil {
 		t.Fatalf("LoadCASTableToMemory() error = %v", err)
 	}
@@ -69,9 +68,9 @@ func TestUnloadCASTableFromMemorySetsUnloadedState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	err = client.UnloadCASTableFromMemory(context.Background(), "server-1", "Public", "class")
+	err = client.UnloadCASTableFromMemory(t.Context(), "server-1", "Public", "class")
 	if err != nil {
 		t.Fatalf("UnloadCASTableFromMemory() error = %v", err)
 	}
@@ -87,9 +86,9 @@ func TestUnloadCASTableFromMemoryReturnsStatusError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	err = client.UnloadCASTableFromMemory(context.Background(), "server-1", "Public", "class")
+	err = client.UnloadCASTableFromMemory(t.Context(), "server-1", "Public", "class")
 	if err == nil {
 		t.Fatal("UnloadCASTableFromMemory() error = nil, want error")
 	}

@@ -1,7 +1,6 @@
 package viya
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -29,9 +28,9 @@ func TestGetBatchContextByNameSendsNameQuery(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	batchContext, err := client.GetBatchContextByName(context.Background(), "default context")
+	batchContext, err := client.GetBatchContextByName(t.Context(), "default context")
 	if err != nil {
 		t.Fatalf("GetBatchContextByName() error = %v", err)
 	}

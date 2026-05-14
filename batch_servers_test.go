@@ -1,7 +1,6 @@
 package viya
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -26,9 +25,9 @@ func TestGetBatchServersListDecodesServers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	servers, err := client.GetBatchServersList(context.Background())
+	servers, err := client.GetBatchServersList(t.Context())
 	if err != nil {
 		t.Fatalf("GetBatchServersList() error = %v", err)
 	}
@@ -64,9 +63,9 @@ func TestGetBatchServerInfoDecodesServer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	serverInfo, err := client.GetBatchServerInfo(context.Background(), "server 1")
+	serverInfo, err := client.GetBatchServerInfo(t.Context(), "server 1")
 	if err != nil {
 		t.Fatalf("GetBatchServerInfo() error = %v", err)
 	}
@@ -98,9 +97,9 @@ func TestDeleteBatchServerSendsDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	err = client.DeleteBatchServer(context.Background(), "server 1")
+	err = client.DeleteBatchServer(t.Context(), "server 1")
 	if err != nil {
 		t.Fatalf("DeleteBatchServer() error = %v", err)
 	}

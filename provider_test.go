@@ -1,7 +1,6 @@
 package viya
 
 import (
-	"context"
 	"errors"
 	"net/url"
 	"testing"
@@ -28,7 +27,7 @@ func TestGetDefaultClientReturnsConfiguredClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	want := NewClient(context.Background(), WithBaseURL(u))
+	want := NewClient(t.Context(), WithBaseURL(u))
 	SetDefaultClient(want)
 
 	got, err := GetDefaultClient()
@@ -62,7 +61,7 @@ func TestMustGetDefaultClientReturnsConfiguredClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	want := NewClient(context.Background(), WithBaseURL(u))
+	want := NewClient(t.Context(), WithBaseURL(u))
 	SetDefaultClient(want)
 
 	if got := MustGetDefaultClient(); got != want {

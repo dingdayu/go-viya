@@ -1,7 +1,6 @@
 package viya
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -26,9 +25,9 @@ func TestGetComputeJobLogDecodesLines(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	log, err := client.GetComputeJobLog(context.Background(), "session-1", "0")
+	log, err := client.GetComputeJobLog(t.Context(), "session-1", "0")
 	if err != nil {
 		t.Fatalf("GetComputeJobLog() error = %v", err)
 	}
@@ -58,9 +57,9 @@ func TestGetComputeJobListingTextReturnsPlainText(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	text, err := client.GetComputeJobListingText(context.Background(), "session-1", "0")
+	text, err := client.GetComputeJobListingText(t.Context(), "session-1", "0")
 	if err != nil {
 		t.Fatalf("GetComputeJobListingText() error = %v", err)
 	}

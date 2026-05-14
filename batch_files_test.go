@@ -1,7 +1,6 @@
 package viya
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -43,9 +42,9 @@ func TestUploadBatchFileFromReaderSendsFileContent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	err = client.UploadBatchFileFromReader(context.Background(), "file set 1", "program one.sas", strings.NewReader(body))
+	err = client.UploadBatchFileFromReader(t.Context(), "file set 1", "program one.sas", strings.NewReader(body))
 	if err != nil {
 		t.Fatalf("UploadBatchFileFromReader() error = %v", err)
 	}
@@ -61,9 +60,9 @@ func TestUploadBatchFileFromReaderReturnsStatusError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	err = client.UploadBatchFileFromReader(context.Background(), "file-set-1", "program.sas", strings.NewReader("body"))
+	err = client.UploadBatchFileFromReader(t.Context(), "file-set-1", "program.sas", strings.NewReader("body"))
 	if err == nil {
 		t.Fatal("UploadBatchFileFromReader() error = nil, want error")
 	}

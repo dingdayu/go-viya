@@ -1,7 +1,6 @@
 package viya
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -43,9 +42,9 @@ func TestCreateComputeSessionSendsRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	session, err := client.CreateComputeSession(context.Background(), "context 1", CreateComputeSessionRequest{
+	session, err := client.CreateComputeSession(t.Context(), "context 1", CreateComputeSessionRequest{
 		Name:        "session one",
 		Environment: &ComputeEnvironment{Options: []string{"fullstimer"}},
 	})
@@ -75,9 +74,9 @@ func TestGetComputeSessionStateReturnsPlainTextState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	state, err := client.GetComputeSessionState(context.Background(), "session-1")
+	state, err := client.GetComputeSessionState(t.Context(), "session-1")
 	if err != nil {
 		t.Fatalf("GetComputeSessionState() error = %v", err)
 	}
@@ -110,9 +109,9 @@ func TestCancelComputeSessionSendsIfMatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	state, err := client.CancelComputeSession(context.Background(), "session-1", `"etag-1"`)
+	state, err := client.CancelComputeSession(t.Context(), "session-1", `"etag-1"`)
 	if err != nil {
 		t.Fatalf("CancelComputeSession() error = %v", err)
 	}
@@ -138,9 +137,9 @@ func TestDeleteComputeSessionAcceptsAcceptedStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	if err := client.DeleteComputeSession(context.Background(), "session-1"); err != nil {
+	if err := client.DeleteComputeSession(t.Context(), "session-1"); err != nil {
 		t.Fatalf("DeleteComputeSession() error = %v", err)
 	}
 }

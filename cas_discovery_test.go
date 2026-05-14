@@ -1,7 +1,6 @@
 package viya
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -34,9 +33,9 @@ func TestGetCASServersRequestsCollection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
+	client := NewClient(t.Context(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
 
-	servers, err := client.GetCASServers(context.Background(), ListOptions{Limit: 10})
+	servers, err := client.GetCASServers(t.Context(), ListOptions{Limit: 10})
 	if err != nil {
 		t.Fatalf("GetCASServers() error = %v", err)
 	}
@@ -63,9 +62,9 @@ func TestGetCASTablesEscapesPathAndSetsPaging(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	tables, err := client.GetCASTables(context.Background(), "server 1", "Public Data", ListOptions{Start: 5, Limit: 25})
+	tables, err := client.GetCASTables(t.Context(), "server 1", "Public Data", ListOptions{Start: 5, Limit: 25})
 	if err != nil {
 		t.Fatalf("GetCASTables() error = %v", err)
 	}
@@ -84,9 +83,9 @@ func TestGetCASTableColumnsReturnsStatusError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	_, err = client.GetCASTableColumns(context.Background(), "server-1", "Public", "missing", ListOptions{})
+	_, err = client.GetCASTableColumns(t.Context(), "server-1", "Public", "missing", ListOptions{})
 	if err == nil {
 		t.Fatal("GetCASTableColumns() error = nil, want error")
 	}
@@ -124,9 +123,9 @@ func TestGetCASTableRowsUsesDataTablesAndRowSets(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	rows, err := client.GetCASTableRows(context.Background(), "server 1", "Public Data", "class table", ListOptions{Start: 2, Limit: 3})
+	rows, err := client.GetCASTableRows(t.Context(), "server 1", "Public Data", "class table", ListOptions{Start: 2, Limit: 3})
 	if err != nil {
 		t.Fatalf("GetCASTableRows() error = %v", err)
 	}

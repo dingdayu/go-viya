@@ -1,7 +1,6 @@
 package viya
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -29,9 +28,9 @@ func TestGetComputeContextsRequestsFullItems(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	contexts, err := client.GetComputeContexts(context.Background())
+	contexts, err := client.GetComputeContexts(t.Context())
 	if err != nil {
 		t.Fatalf("GetComputeContexts() error = %v", err)
 	}
@@ -58,9 +57,9 @@ func TestGetComputeContextInfoEscapesContextID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	contextInfo, err := client.GetComputeContextInfo(context.Background(), "context 1")
+	contextInfo, err := client.GetComputeContextInfo(t.Context(), "context 1")
 	if err != nil {
 		t.Fatalf("GetComputeContextInfo() error = %v", err)
 	}

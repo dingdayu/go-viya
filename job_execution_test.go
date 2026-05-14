@@ -1,7 +1,6 @@
 package viya
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -55,9 +54,9 @@ func TestSubmitJobExecutionCodeSendsBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
+	client := NewClient(t.Context(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
 
-	job, err := client.SubmitJobExecutionCode(context.Background(), SubmitJobExecutionCodeRequest{
+	job, err := client.SubmitJobExecutionCode(t.Context(), SubmitJobExecutionCodeRequest{
 		Name:        "job one",
 		Code:        "proc options; run;",
 		ContextName: "SAS Job Execution compute context",
@@ -84,9 +83,9 @@ func TestGetJobExecutionJobsSetsPaging(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	jobs, err := client.GetJobExecutionJobs(context.Background(), ListOptions{Start: 3, Limit: 20})
+	jobs, err := client.GetJobExecutionJobs(t.Context(), ListOptions{Start: 3, Limit: 20})
 	if err != nil {
 		t.Fatalf("GetJobExecutionJobs() error = %v", err)
 	}
@@ -120,16 +119,16 @@ func TestGetAndCancelJobExecutionJobEscapeID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	job, err := client.GetJobExecutionJob(context.Background(), "job 1")
+	job, err := client.GetJobExecutionJob(t.Context(), "job 1")
 	if err != nil {
 		t.Fatalf("GetJobExecutionJob() error = %v", err)
 	}
 	if got, want := job.State, "running"; got != want {
 		t.Fatalf("State = %q, want %q", got, want)
 	}
-	if err := client.CancelJobExecutionJob(context.Background(), "job 1"); err != nil {
+	if err := client.CancelJobExecutionJob(t.Context(), "job 1"); err != nil {
 		t.Fatalf("CancelJobExecutionJob() error = %v", err)
 	}
 	if !sawGet || !sawDelete {
@@ -155,9 +154,9 @@ func TestGetJobExecutionJobLogPrefersLogTxt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	log, err := client.GetJobExecutionJobLog(context.Background(), "job-1")
+	log, err := client.GetJobExecutionJobLog(t.Context(), "job-1")
 	if err != nil {
 		t.Fatalf("GetJobExecutionJobLog() error = %v", err)
 	}
@@ -186,9 +185,9 @@ func TestGetJobExecutionJobLogFallsBackToLogAndNoLogMessage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse() error = %v", err)
 	}
-	client := NewClient(context.Background(), WithBaseURL(u))
+	client := NewClient(t.Context(), WithBaseURL(u))
 
-	log, err := client.GetJobExecutionJobLog(context.Background(), "job-log")
+	log, err := client.GetJobExecutionJobLog(t.Context(), "job-log")
 	if err != nil {
 		t.Fatalf("GetJobExecutionJobLog(job-log) error = %v", err)
 	}
@@ -196,7 +195,7 @@ func TestGetJobExecutionJobLogFallsBackToLogAndNoLogMessage(t *testing.T) {
 		t.Fatalf("log = %q, want %q", got, want)
 	}
 
-	log, err = client.GetJobExecutionJobLog(context.Background(), "job-no-log")
+	log, err = client.GetJobExecutionJobLog(t.Context(), "job-no-log")
 	if err != nil {
 		t.Fatalf("GetJobExecutionJobLog(job-no-log) error = %v", err)
 	}
