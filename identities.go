@@ -14,20 +14,20 @@ import (
 // https://developer.sas.com/rest-apis/identities
 
 // RefreshIdentitiesCache triggers a refresh of the identities cache in SAS Viya.
-func (c *Client) RefreshIdentitiesCache(ctx context.Context) (success bool, err error) {
+func (c *Client) RefreshIdentitiesCache(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "RefreshIdentitiesCache")
 	defer span.End()
 
 	request := c.client.R().SetContext(ctx)
 	resp, err := request.Post("/identities/cache/refreshes")
 	if err != nil {
-		return false, err
+		return err
 	}
 	if !resp.IsSuccess() {
 		span.SetStatus(codes.Error, resp.String())
-		return false, fmt.Errorf("failed to refresh identities cache, status code: %d", resp.StatusCode())
+		return fmt.Errorf("failed to refresh identities cache, status code: %d", resp.StatusCode())
 	}
-	return true, nil
+	return nil
 }
 
 // IdentitiesUsers describes a user entry returned by the SAS Viya Identities API.
@@ -86,10 +86,10 @@ func (c *Client) GetIdentitiesLDAPUser(ctx context.Context) (map[string]any, err
 }
 
 // PatchIdentitiesLDAPUser updates the LDAP provider configuration with the supplied values.
-func (c *Client) PatchIdentitiesLDAPUser(ctx context.Context, updates map[string]any) (bool, error) {
+func (c *Client) PatchIdentitiesLDAPUser(ctx context.Context, updates map[string]any) error {
 	conf, err := c.GetIdentitiesLDAPUser(ctx)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	// apply updates
@@ -100,11 +100,11 @@ func (c *Client) PatchIdentitiesLDAPUser(ctx context.Context, updates map[string
 	// find the update link safely
 	linksAny, ok := conf["links"]
 	if !ok {
-		return false, errors.New("configuration has no links")
+		return errors.New("configuration has no links")
 	}
 	linksSlice, ok := linksAny.([]any)
 	if !ok {
-		return false, errors.New("configuration links has unexpected type")
+		return errors.New("configuration links has unexpected type")
 	}
 
 	var link Link
@@ -125,7 +125,7 @@ func (c *Client) PatchIdentitiesLDAPUser(ctx context.Context, updates map[string
 		}
 	}
 	if link.Href == "" || link.Method == "" {
-		return false, errors.New("update link not found in configuration")
+		return errors.New("update link not found in configuration")
 	}
 
 	req := c.client.R().SetContext(ctx)
@@ -135,13 +135,16 @@ func (c *Client) PatchIdentitiesLDAPUser(ctx context.Context, updates map[string
 
 	response, err := req.SetBody(conf).Execute(link.Method, link.Href)
 	if err != nil {
-		return false, err
+		return err
 	}
-	return response.IsSuccess(), nil
+	if !response.IsSuccess() {
+		return fmt.Errorf("failed to patch LDAP user, status code: %d", response.StatusCode())
+	}
+	return nil
 }
 
 // UpdateIdentitiesLDAPObjectFilter updates the LDAP object filter to include only the specified usernames.
-func (c *Client) UpdateIdentitiesLDAPObjectFilter(ctx context.Context, usernames []string) (bool, error) {
+func (c *Client) UpdateIdentitiesLDAPObjectFilter(ctx context.Context, usernames []string) error {
 	var accountNames []string
 	for _, username := range usernames {
 		if username == "" {
@@ -151,20 +154,16 @@ func (c *Client) UpdateIdentitiesLDAPObjectFilter(ctx context.Context, usernames
 	}
 
 	if len(accountNames) == 0 {
-		return false, errors.New("no usernames provided for LDAP object filter update")
+		return errors.New("no usernames provided for LDAP object filter update")
 	}
 
 	updates := map[string]any{
 		"objectFilter": fmt.Sprintf("(&(|%s)(objectClass=user))", strings.Join(accountNames, "")),
 	}
-	success, err := c.PatchIdentitiesLDAPUser(ctx, updates)
-	if err != nil {
-		return false, fmt.Errorf("updating LDAP object filter for %s: %w", strings.Join(usernames, ", "), err)
+	if err := c.PatchIdentitiesLDAPUser(ctx, updates); err != nil {
+		return fmt.Errorf("updating LDAP object filter for %s: %w", strings.Join(usernames, ", "), err)
 	}
-	if !success {
-		return false, fmt.Errorf("failed to update LDAP object filter for %s", strings.Join(usernames, ", "))
-	}
-	return true, nil
+	return nil
 }
 
 // strOrEmpty returns v as a string, or "" if v is not a string.
