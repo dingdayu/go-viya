@@ -402,6 +402,12 @@ func (r workflowRunner) runParallelGroup(ctx context.Context, steps []workflowSt
 			isolatedSession, err := r.client.CreateComputeSession(groupCtx, r.contextID, viya.CreateComputeSessionRequest{
 				Version: 3,
 				Name:    fmt.Sprintf("%s-%d", r.sessionName, i+1),
+				Environment: func() *viya.ComputeEnvironment {
+					if autoexec := strings.TrimSpace(r.userConfig.Autoexec); autoexec != "" {
+						return &viya.ComputeEnvironment{InitCode: splitCodeLines(autoexec)}
+					}
+					return nil
+				}(),
 			})
 			if err != nil {
 				results[i] = workflowNodeResult{Kind: "step", Name: stepDisplayName(step, i), Error: err.Error()}
@@ -411,11 +417,13 @@ func (r workflowRunner) runParallelGroup(ctx context.Context, steps []workflowSt
 				})
 				return
 			}
-			defer func() {
-				cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
-				defer cleanupCancel()
-				_ = r.client.DeleteComputeSession(cleanupCtx, isolatedSession.ID)
-			}()
+			if !r.cfg.KeepSession {
+				defer func() {
+					cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+					defer cleanupCancel()
+					_ = r.client.DeleteComputeSession(cleanupCtx, isolatedSession.ID)
+				}()
+			}
 
 			stepResult, err := r.runStep(groupCtx, step, isolatedSession.ID)
 			results[i] = stepResult

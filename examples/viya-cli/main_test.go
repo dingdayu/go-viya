@@ -872,6 +872,7 @@ variables:
 	var mu sync.Mutex
 	createdSessions := 0
 	createdJobs := 0
+	deletedSessions := 0
 	sessionIDs := map[string]struct{}{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
@@ -894,7 +895,7 @@ variables:
 			if !strings.HasPrefix(body.Name, "demo-workflow") {
 				t.Fatalf("session name = %q, want prefix %q", body.Name, "demo-workflow")
 			}
-			if body.Name == "demo-workflow" && (len(body.Environment.InitCode) == 0 || !strings.Contains(body.Environment.InitCode[0], "autoexec")) {
+			if len(body.Environment.InitCode) == 0 || !strings.Contains(body.Environment.InitCode[0], "autoexec") {
 				t.Fatalf("initCode = %#v, want autoexec", body.Environment.InitCode)
 			}
 			sessionID := fmt.Sprintf("session-%d", createdSessions)
@@ -944,6 +945,7 @@ variables:
 			w.Header().Set("Content-Type", "text/plain")
 			_, _ = w.Write([]byte("workflow listing"))
 		case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-"):
+			deletedSessions++
 			w.WriteHeader(http.StatusAccepted)
 		default:
 			t.Fatalf("unexpected request %s %s", r.Method, r.RequestURI)
@@ -960,6 +962,9 @@ variables:
 	}
 	if createdJobs != 3 {
 		t.Fatalf("createdJobs = %d, want 3", createdJobs)
+	}
+	if deletedSessions != 3 {
+		t.Fatalf("deletedSessions = %d, want 3", deletedSessions)
 	}
 	if !strings.Contains(stdout, `"ok": true`) || !strings.Contains(stdout, `"kind": "parallel"`) {
 		t.Fatalf("stdout = %s, want workflow result JSON", stdout)
@@ -1020,6 +1025,58 @@ preCode: '%put user context;'
 	}
 	if !strings.Contains(stdout, `"contextId": "ctx-user"`) || !strings.Contains(stdout, `"contextName": "user context"`) {
 		t.Fatalf("stdout = %s, want context from user config", stdout)
+	}
+}
+
+func TestWorkflowRunKeepSessionSkipsParallelSessionCleanup(t *testing.T) {
+	dir := t.TempDir()
+	for name, content := range map[string]string{
+		"prepare.sas":  "data _null_; put 'prepare'; run;",
+		"branch-a.sas": "data _null_; put 'a'; run;",
+		"branch-b.sas": "data _null_; put 'b'; run;",
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+	workflowPath := filepath.Join(dir, "workflow.json")
+	if err := os.WriteFile(workflowPath, []byte(`{"version":1,"name":"keep-sessions","contextId":"ctx-1","steps":[{"name":"prepare","file":"prepare.sas"},[{"name":"branch-a","file":"branch-a.sas"},{"name":"branch-b","file":"branch-b.sas"}]]}`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+	userConfigPath := filepath.Join(dir, "user.yaml")
+	if err := os.WriteFile(userConfigPath, []byte("autoexec: '%put autoexec;'"), 0o644); err != nil {
+		t.Fatalf("write user config: %v", err)
+	}
+
+	deletedSessions := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/compute/contexts/ctx-1":
+			_, _ = w.Write([]byte(`{"id":"ctx-1","name":"ctx one"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/compute/contexts/ctx-1/sessions":
+			_, _ = w.Write([]byte(`{"id":"session-1","name":"s","state":"idle"}`))
+		case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-") && strings.HasSuffix(r.URL.Path, "/jobs"):
+			_, _ = w.Write([]byte(`{"id":"job-1","sessionId":"session-1","state":"running"}`))
+		case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/jobs/") && strings.HasSuffix(r.URL.Path, "/state"):
+			w.Header().Set("Content-Type", "text/plain")
+			_, _ = w.Write([]byte("completed"))
+		case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/jobs/"):
+			_, _ = w.Write([]byte(`{"id":"job-info","sessionId":"session-1","state":"completed","jobConditionCode":0}`))
+		case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-"):
+			deletedSessions++
+			w.WriteHeader(http.StatusAccepted)
+		default:
+			t.Fatalf("unexpected request %s %s", r.Method, r.RequestURI)
+		}
+	}))
+	defer server.Close()
+
+	if _, _, err := executeCLI("workflow", "--base-url", server.URL, "--access-token", "test-token", "--user-config", userConfigPath, "--keep-session", "run", "--file", workflowPath); err != nil {
+		t.Fatalf("executeCLI() error = %v", err)
+	}
+	if deletedSessions != 0 {
+		t.Fatalf("deletedSessions = %d, want 0 when keep-session is enabled", deletedSessions)
 	}
 }
 
