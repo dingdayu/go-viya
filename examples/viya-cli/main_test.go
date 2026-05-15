@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -830,7 +831,7 @@ steps:
 	}
 }
 
-func TestWorkflowRunUsesSingleComputeSessionForMultipleJobs(t *testing.T) {
+func TestWorkflowRunUsesIsolatedSessionsForParallelJobs(t *testing.T) {
 	dir := t.TempDir()
 	for name, content := range map[string]string{
 		"prepare.sas":  "data _null_; put 'prepare'; run;",
@@ -871,6 +872,8 @@ variables:
 	var mu sync.Mutex
 	createdSessions := 0
 	createdJobs := 0
+	deletedSessions := 0
+	sessionIDs := map[string]struct{}{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
@@ -889,16 +892,26 @@ variables:
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 				t.Fatalf("decode session request: %v", err)
 			}
-			if got, want := body.Name, "demo-workflow"; got != want {
-				t.Fatalf("session name = %q, want %q", got, want)
+			if !strings.HasPrefix(body.Name, "demo-workflow") {
+				t.Fatalf("session name = %q, want prefix %q", body.Name, "demo-workflow")
 			}
 			if len(body.Environment.InitCode) == 0 || !strings.Contains(body.Environment.InitCode[0], "autoexec") {
 				t.Fatalf("initCode = %#v, want autoexec", body.Environment.InitCode)
 			}
+			sessionID := fmt.Sprintf("session-%d", createdSessions)
+			sessionIDs[sessionID] = struct{}{}
 			w.WriteHeader(http.StatusCreated)
-			_, _ = w.Write([]byte(`{"id":"session-1","name":"demo-workflow","state":"idle"}`))
-		case r.Method == http.MethodPost && r.URL.Path == "/compute/sessions/session-1/jobs":
+			_, _ = w.Write([]byte(`{"id":"` + sessionID + `","name":"` + body.Name + `","state":"idle"}`))
+		case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-") && strings.HasSuffix(r.URL.Path, "/jobs"):
 			createdJobs++
+			parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+			if len(parts) < 3 {
+				t.Fatalf("invalid session job path: %s", r.URL.Path)
+			}
+			sessionID := parts[2]
+			if _, ok := sessionIDs[sessionID]; !ok {
+				t.Fatalf("unknown session ID in path: %s", sessionID)
+			}
 			var body struct {
 				Name      string         `json:"name"`
 				Code      []string       `json:"code"`
@@ -918,19 +931,21 @@ variables:
 				t.Fatalf("variables = %#v, want SAS program path variables", body.Variables)
 			}
 			w.WriteHeader(http.StatusCreated)
-			_, _ = w.Write([]byte(`{"id":"job-` + body.Name + `","sessionId":"session-1","state":"running"}`))
-		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-1/jobs/job-") && strings.HasSuffix(r.URL.Path, "/state"):
+			_, _ = w.Write([]byte(`{"id":"job-` + body.Name + `","sessionId":"` + sessionID + `","state":"running"}`))
+		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-") && strings.Contains(r.URL.Path, "/jobs/job-") && strings.HasSuffix(r.URL.Path, "/state"):
 			w.Header().Set("Content-Type", "text/plain")
 			_, _ = w.Write([]byte("completed"))
-		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-1/jobs/job-") && !strings.HasSuffix(r.URL.Path, "/state") && !strings.HasSuffix(r.URL.Path, "/log") && !strings.HasSuffix(r.URL.Path, "/listing"):
-			_, _ = w.Write([]byte(`{"id":"job-info","sessionId":"session-1","state":"completed","jobConditionCode":0}`))
+		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-") && strings.Contains(r.URL.Path, "/jobs/job-") && !strings.HasSuffix(r.URL.Path, "/state") && !strings.HasSuffix(r.URL.Path, "/log") && !strings.HasSuffix(r.URL.Path, "/listing"):
+			parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+			_, _ = w.Write([]byte(`{"id":"job-info","sessionId":"` + parts[2] + `","state":"completed","jobConditionCode":0}`))
 		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/log"):
 			w.Header().Set("Content-Type", "text/plain")
 			_, _ = w.Write([]byte("workflow log"))
 		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/listing"):
 			w.Header().Set("Content-Type", "text/plain")
 			_, _ = w.Write([]byte("workflow listing"))
-		case r.Method == http.MethodDelete && r.URL.Path == "/compute/sessions/session-1":
+		case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-"):
+			deletedSessions++
 			w.WriteHeader(http.StatusAccepted)
 		default:
 			t.Fatalf("unexpected request %s %s", r.Method, r.RequestURI)
@@ -942,11 +957,14 @@ variables:
 	if err != nil {
 		t.Fatalf("executeCLI() error = %v, stdout = %s", err, stdout)
 	}
-	if createdSessions != 1 {
-		t.Fatalf("createdSessions = %d, want 1", createdSessions)
+	if createdSessions != 3 {
+		t.Fatalf("createdSessions = %d, want 3", createdSessions)
 	}
 	if createdJobs != 3 {
 		t.Fatalf("createdJobs = %d, want 3", createdJobs)
+	}
+	if deletedSessions != 3 {
+		t.Fatalf("deletedSessions = %d, want 3", deletedSessions)
 	}
 	if !strings.Contains(stdout, `"ok": true`) || !strings.Contains(stdout, `"kind": "parallel"`) {
 		t.Fatalf("stdout = %s, want workflow result JSON", stdout)
@@ -1007,6 +1025,58 @@ preCode: '%put user context;'
 	}
 	if !strings.Contains(stdout, `"contextId": "ctx-user"`) || !strings.Contains(stdout, `"contextName": "user context"`) {
 		t.Fatalf("stdout = %s, want context from user config", stdout)
+	}
+}
+
+func TestWorkflowRunKeepSessionSkipsParallelSessionCleanup(t *testing.T) {
+	dir := t.TempDir()
+	for name, content := range map[string]string{
+		"prepare.sas":  "data _null_; put 'prepare'; run;",
+		"branch-a.sas": "data _null_; put 'a'; run;",
+		"branch-b.sas": "data _null_; put 'b'; run;",
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+	workflowPath := filepath.Join(dir, "workflow.json")
+	if err := os.WriteFile(workflowPath, []byte(`{"version":1,"name":"keep-sessions","contextId":"ctx-1","steps":[{"name":"prepare","file":"prepare.sas"},[{"name":"branch-a","file":"branch-a.sas"},{"name":"branch-b","file":"branch-b.sas"}]]}`), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+	userConfigPath := filepath.Join(dir, "user.yaml")
+	if err := os.WriteFile(userConfigPath, []byte("autoexec: '%put autoexec;'"), 0o644); err != nil {
+		t.Fatalf("write user config: %v", err)
+	}
+
+	deletedSessions := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/compute/contexts/ctx-1":
+			_, _ = w.Write([]byte(`{"id":"ctx-1","name":"ctx one"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/compute/contexts/ctx-1/sessions":
+			_, _ = w.Write([]byte(`{"id":"session-1","name":"s","state":"idle"}`))
+		case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-") && strings.HasSuffix(r.URL.Path, "/jobs"):
+			_, _ = w.Write([]byte(`{"id":"job-1","sessionId":"session-1","state":"running"}`))
+		case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/jobs/") && strings.HasSuffix(r.URL.Path, "/state"):
+			w.Header().Set("Content-Type", "text/plain")
+			_, _ = w.Write([]byte("completed"))
+		case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/jobs/"):
+			_, _ = w.Write([]byte(`{"id":"job-info","sessionId":"session-1","state":"completed","jobConditionCode":0}`))
+		case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-"):
+			deletedSessions++
+			w.WriteHeader(http.StatusAccepted)
+		default:
+			t.Fatalf("unexpected request %s %s", r.Method, r.RequestURI)
+		}
+	}))
+	defer server.Close()
+
+	if _, _, err := executeCLI("workflow", "--base-url", server.URL, "--access-token", "test-token", "--user-config", userConfigPath, "--keep-session", "run", "--file", workflowPath); err != nil {
+		t.Fatalf("executeCLI() error = %v", err)
+	}
+	if deletedSessions != 0 {
+		t.Fatalf("deletedSessions = %d, want 0 when keep-session is enabled", deletedSessions)
 	}
 }
 

@@ -140,7 +140,7 @@ viya-cli workflow run --file ./examples/workflow.json -o json
 工作流文件使用简单的结构：
 
 - 顶层的 `steps` 按顺序运行。
-- `steps` 内的嵌套数组并行运行其子工作项。
+- `steps` 内的嵌套数组并行运行其子工作项；同一并行组中的每个工作项会使用独立的 Compute session，以降低代码域冲突风险。
 - 每个工作项可以定义 `name`、`file`/`work`/`path`、`code`、`log`、`listing` 和 `variables`。
 - `file`、`work` 和 `path` 相对于工作流文件目录解析。
 - 基于文件的工作项还会接收 `_SASPROGRAMFILE` 和 `_SASPROGRAMDIR`，以便 SAS 代码可以像 SAS VS Code 扩展那样推导相对路径。
