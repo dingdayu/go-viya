@@ -181,9 +181,10 @@ service behavior.
 ## Workflow Plans
 
 Use `viya-cli workflow` when the user has multiple SAS files that should run as
-one Compute-based task. A workflow run creates one Compute session, then creates
-one Compute job per work item. This avoids the batch cold-start pattern where
-each submission can create a fresh runtime pod.
+one Compute-based task. Serial steps run in a shared Compute session, while each
+parallel work item runs in its own Compute session to reduce code-domain
+conflicts. This still avoids the batch cold-start pattern where every isolated
+submission creates a fresh runtime pod across the whole workflow timeline.
 
 Validate a workflow before running it:
 

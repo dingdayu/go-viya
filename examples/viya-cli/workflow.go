@@ -282,6 +282,8 @@ func runWorkflow(ioStreams cliIO, opts workflowOptions, file string, overrides w
 		cfg:         cfg,
 		doc:         doc,
 		userConfig:  userConfig,
+		contextID:   contextID,
+		sessionName: sessionName,
 		sessionID:   session.ID,
 		maxParallel: maxParallel,
 	}
@@ -342,6 +344,8 @@ type workflowRunner struct {
 	cfg         cliConfig
 	doc         workflowDocument
 	userConfig  workflowUserConfig
+	contextID   string
+	sessionName string
 	sessionID   string
 	maxParallel int
 }
@@ -351,7 +355,7 @@ func (r workflowRunner) run(ctx context.Context, nodes []workflowNode) ([]workfl
 	for _, node := range nodes {
 		switch n := node.(type) {
 		case workflowStepNode:
-			stepResult, err := r.runStep(ctx, n.Step)
+			stepResult, err := r.runStep(ctx, n.Step, r.sessionID)
 			results = append(results, stepResult)
 			if err != nil {
 				return results, err
@@ -395,7 +399,25 @@ func (r workflowRunner) runParallelGroup(ctx context.Context, steps []workflowSt
 			}
 			defer func() { <-sem }()
 
-			stepResult, err := r.runStep(groupCtx, step)
+			isolatedSession, err := r.client.CreateComputeSession(groupCtx, r.contextID, viya.CreateComputeSessionRequest{
+				Version: 3,
+				Name:    fmt.Sprintf("%s-%d", r.sessionName, i+1),
+			})
+			if err != nil {
+				results[i] = workflowNodeResult{Kind: "step", Name: stepDisplayName(step, i), Error: err.Error()}
+				once.Do(func() {
+					firstErr = err
+					cancel()
+				})
+				return
+			}
+			defer func() {
+				cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cleanupCancel()
+				_ = r.client.DeleteComputeSession(cleanupCtx, isolatedSession.ID)
+			}()
+
+			stepResult, err := r.runStep(groupCtx, step, isolatedSession.ID)
 			results[i] = stepResult
 			if err != nil {
 				once.Do(func() {
@@ -410,7 +432,7 @@ func (r workflowRunner) runParallelGroup(ctx context.Context, steps []workflowSt
 	return workflowNodeResult{Kind: "parallel", Children: results}, firstErr
 }
 
-func (r workflowRunner) runStep(ctx context.Context, step workflowStep) (workflowNodeResult, error) {
+func (r workflowRunner) runStep(ctx context.Context, step workflowStep, sessionID string) (workflowNodeResult, error) {
 	resolvedFile := ""
 	content := ""
 	if step.File != "" {
@@ -441,13 +463,13 @@ func (r workflowRunner) runStep(ctx context.Context, step workflowStep) (workflo
 	if step.Log != "" || step.Listing != "" {
 		includeOutput = true
 	}
-	result, err := runComputeJob(ctx, r.client, r.sessionID, jobReq, computeJobOptions{IncludeOutput: includeOutput, PollInterval: r.cfg.PollInterval})
+	result, err := runComputeJob(ctx, r.client, sessionID, jobReq, computeJobOptions{IncludeOutput: includeOutput, PollInterval: r.cfg.PollInterval})
 	stepResult := workflowNodeResult{
 		Kind:             "step",
 		Name:             stepDisplayName(step, 0),
 		File:             step.File,
 		Path:             resolvedFile,
-		SessionID:        r.sessionID,
+		SessionID:        sessionID,
 		JobID:            result.JobID,
 		State:            result.State,
 		JobConditionCode: result.JobConditionCode,

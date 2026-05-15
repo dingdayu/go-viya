@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -830,7 +831,7 @@ steps:
 	}
 }
 
-func TestWorkflowRunUsesSingleComputeSessionForMultipleJobs(t *testing.T) {
+func TestWorkflowRunUsesIsolatedSessionsForParallelJobs(t *testing.T) {
 	dir := t.TempDir()
 	for name, content := range map[string]string{
 		"prepare.sas":  "data _null_; put 'prepare'; run;",
@@ -871,6 +872,7 @@ variables:
 	var mu sync.Mutex
 	createdSessions := 0
 	createdJobs := 0
+	sessionIDs := map[string]struct{}{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
@@ -889,16 +891,26 @@ variables:
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 				t.Fatalf("decode session request: %v", err)
 			}
-			if got, want := body.Name, "demo-workflow"; got != want {
-				t.Fatalf("session name = %q, want %q", got, want)
+			if !strings.HasPrefix(body.Name, "demo-workflow") {
+				t.Fatalf("session name = %q, want prefix %q", body.Name, "demo-workflow")
 			}
-			if len(body.Environment.InitCode) == 0 || !strings.Contains(body.Environment.InitCode[0], "autoexec") {
+			if body.Name == "demo-workflow" && (len(body.Environment.InitCode) == 0 || !strings.Contains(body.Environment.InitCode[0], "autoexec")) {
 				t.Fatalf("initCode = %#v, want autoexec", body.Environment.InitCode)
 			}
+			sessionID := fmt.Sprintf("session-%d", createdSessions)
+			sessionIDs[sessionID] = struct{}{}
 			w.WriteHeader(http.StatusCreated)
-			_, _ = w.Write([]byte(`{"id":"session-1","name":"demo-workflow","state":"idle"}`))
-		case r.Method == http.MethodPost && r.URL.Path == "/compute/sessions/session-1/jobs":
+			_, _ = w.Write([]byte(`{"id":"` + sessionID + `","name":"` + body.Name + `","state":"idle"}`))
+		case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-") && strings.HasSuffix(r.URL.Path, "/jobs"):
 			createdJobs++
+			parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+			if len(parts) < 3 {
+				t.Fatalf("invalid session job path: %s", r.URL.Path)
+			}
+			sessionID := parts[2]
+			if _, ok := sessionIDs[sessionID]; !ok {
+				t.Fatalf("unknown session ID in path: %s", sessionID)
+			}
 			var body struct {
 				Name      string         `json:"name"`
 				Code      []string       `json:"code"`
@@ -918,19 +930,20 @@ variables:
 				t.Fatalf("variables = %#v, want SAS program path variables", body.Variables)
 			}
 			w.WriteHeader(http.StatusCreated)
-			_, _ = w.Write([]byte(`{"id":"job-` + body.Name + `","sessionId":"session-1","state":"running"}`))
-		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-1/jobs/job-") && strings.HasSuffix(r.URL.Path, "/state"):
+			_, _ = w.Write([]byte(`{"id":"job-` + body.Name + `","sessionId":"` + sessionID + `","state":"running"}`))
+		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-") && strings.Contains(r.URL.Path, "/jobs/job-") && strings.HasSuffix(r.URL.Path, "/state"):
 			w.Header().Set("Content-Type", "text/plain")
 			_, _ = w.Write([]byte("completed"))
-		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-1/jobs/job-") && !strings.HasSuffix(r.URL.Path, "/state") && !strings.HasSuffix(r.URL.Path, "/log") && !strings.HasSuffix(r.URL.Path, "/listing"):
-			_, _ = w.Write([]byte(`{"id":"job-info","sessionId":"session-1","state":"completed","jobConditionCode":0}`))
+		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-") && strings.Contains(r.URL.Path, "/jobs/job-") && !strings.HasSuffix(r.URL.Path, "/state") && !strings.HasSuffix(r.URL.Path, "/log") && !strings.HasSuffix(r.URL.Path, "/listing"):
+			parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+			_, _ = w.Write([]byte(`{"id":"job-info","sessionId":"` + parts[2] + `","state":"completed","jobConditionCode":0}`))
 		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/log"):
 			w.Header().Set("Content-Type", "text/plain")
 			_, _ = w.Write([]byte("workflow log"))
 		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/listing"):
 			w.Header().Set("Content-Type", "text/plain")
 			_, _ = w.Write([]byte("workflow listing"))
-		case r.Method == http.MethodDelete && r.URL.Path == "/compute/sessions/session-1":
+		case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/compute/sessions/session-"):
 			w.WriteHeader(http.StatusAccepted)
 		default:
 			t.Fatalf("unexpected request %s %s", r.Method, r.RequestURI)
@@ -942,8 +955,8 @@ variables:
 	if err != nil {
 		t.Fatalf("executeCLI() error = %v, stdout = %s", err, stdout)
 	}
-	if createdSessions != 1 {
-		t.Fatalf("createdSessions = %d, want 1", createdSessions)
+	if createdSessions != 3 {
+		t.Fatalf("createdSessions = %d, want 3", createdSessions)
 	}
 	if createdJobs != 3 {
 		t.Fatalf("createdJobs = %d, want 3", createdJobs)
