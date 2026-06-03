@@ -32,6 +32,7 @@ const (
 	AcceptBatchJobState = AcceptJSON + ", application/vnd.sas.batch.job.state+json, application/vnd.sas.batch.job.state+json;version=1, application/vnd.sas.batch.job+json, application/vnd.sas.batch.job+json;version=1, " + AcceptSASError
 
 	// Reports and Model Management API media types.
+	AcceptMLProject           = "application/vnd.sas.analytics.ml.pipeline.automation.project+json"
 	AcceptReportImageJob      = "application/vnd.sas.report.images.job+json"
 	ContentTypeReportImageJob = "application/vnd.sas.report.images.job.request+json"
 )
