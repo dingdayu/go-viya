@@ -99,6 +99,21 @@ func (c *Client) GetReport(ctx context.Context, reportID string) (resp ReportDef
 		return resp, fmt.Errorf("failed to get report, status code: %d", r.StatusCode())
 	}
 
+	var definition map[string]any
+	contentResp, err := c.client.R().
+		SetContext(ctx).
+		SetHeader("Accept", AcceptJSONError).
+		SetResult(&definition).
+		Get(fmt.Sprintf("/reports/%s/content", url.PathEscape(reportID)))
+	if err != nil {
+		return resp, err
+	}
+	if !contentResp.IsSuccess() {
+		span.SetStatus(codes.Error, contentResp.String())
+		return resp, fmt.Errorf("failed to get report content, status code: %d", contentResp.StatusCode())
+	}
+	resp["definition"] = definition
+
 	return resp, nil
 }
 
@@ -117,7 +132,7 @@ func (c *Client) GetReportImage(ctx context.Context, reportID string, opts Repor
 		SelectionType: defaultString(opts.SelectionType, "perSection"),
 		SectionIndex:  opts.SectionIndex,
 		Size:          defaultString(opts.Size, "800x600"),
-		RenderLimit:   defaultPositive(opts.RenderLimit, 1),
+		RenderLimit:   defaultReportRenderLimit(opts.RenderLimit),
 	}
 
 	r, err := c.client.R().
@@ -145,9 +160,9 @@ func defaultString(value string, fallback string) string {
 	return value
 }
 
-func defaultPositive(value int, fallback int) int {
-	if value <= 0 {
-		return fallback
+func defaultReportRenderLimit(value int) int {
+	if value == 0 {
+		return -1
 	}
 	return value
 }

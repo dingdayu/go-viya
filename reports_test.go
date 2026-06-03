@@ -50,19 +50,25 @@ func TestGetReportsRequestsCollection(t *testing.T) {
 }
 
 func TestGetReportEscapesIDAndReturnsDefinition(t *testing.T) {
+	var calls []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls = append(calls, r.Method+" "+r.RequestURI)
 		if got, want := r.Method, http.MethodGet; got != want {
 			t.Fatalf("method = %q, want %q", got, want)
-		}
-		if got, want := r.RequestURI, "/reports/reports/report%201"; got != want {
-			t.Fatalf("request URI = %q, want %q", got, want)
 		}
 		if got, want := r.Header.Get("Authorization"), "Bearer token-value"; got != want {
 			t.Fatalf("Authorization = %q, want %q", got, want)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"id":"report 1","name":"My Report","definition":{"layout":"single"}}`))
+		switch r.RequestURI {
+		case "/reports/reports/report%201":
+			_, _ = w.Write([]byte(`{"id":"report 1","name":"My Report"}`))
+		case "/reports/report%201/content":
+			_, _ = w.Write([]byte(`{"layout":"single","sections":[{"name":"Overview"}]}`))
+		default:
+			t.Fatalf("request URI = %q, want report metadata or content endpoint", r.RequestURI)
+		}
 	}))
 	defer server.Close()
 
@@ -78,6 +84,16 @@ func TestGetReportEscapesIDAndReturnsDefinition(t *testing.T) {
 	}
 	if got, want := reportDef["name"], "My Report"; got != want {
 		t.Fatalf("name = %q, want %q", got, want)
+	}
+	definition, ok := reportDef["definition"].(map[string]any)
+	if !ok {
+		t.Fatalf("definition = %#v, want map[string]any", reportDef["definition"])
+	}
+	if got, want := definition["layout"], "single"; got != want {
+		t.Fatalf("definition.layout = %q, want %q", got, want)
+	}
+	if got, want := calls, []string{"GET /reports/reports/report%201", "GET /reports/report%201/content"}; !stringSlicesEqual(got, want) {
+		t.Fatalf("calls = %v, want %v", got, want)
 	}
 }
 
@@ -121,6 +137,9 @@ func TestGetReportImageCreatesJob(t *testing.T) {
 		if got, want := body["sectionIndex"], float64(2); got != want {
 			t.Fatalf("sectionIndex = %v, want %v", got, want)
 		}
+		if got, want := body["renderLimit"], float64(-1); got != want {
+			t.Fatalf("renderLimit = %v, want %v", got, want)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"id":"job-1","state":"running"}`))
@@ -142,6 +161,33 @@ func TestGetReportImageCreatesJob(t *testing.T) {
 	}
 }
 
+func TestGetReportImagePreservesNoLimitRenderLimit(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("Decode() error = %v", err)
+		}
+		if got, want := body["renderLimit"], float64(-1); got != want {
+			t.Fatalf("renderLimit = %v, want %v", got, want)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"job-1","state":"running"}`))
+	}))
+	defer server.Close()
+
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(t.Context(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
+
+	_, err = client.GetReportImage(t.Context(), "report-1", ReportImageOptions{RenderLimit: -1})
+	if err != nil {
+		t.Fatalf("GetReportImage() error = %v", err)
+	}
+}
+
 func TestGetReportImageRejectsEmptyReportID(t *testing.T) {
 	client := NewClient(t.Context(), WithBaseURL(&url.URL{}), WithTokenProvider(staticTokenProvider("token")))
 
@@ -149,4 +195,16 @@ func TestGetReportImageRejectsEmptyReportID(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for empty reportID")
 	}
+}
+
+func stringSlicesEqual(a []string, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
