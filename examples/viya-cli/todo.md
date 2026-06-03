@@ -11,20 +11,9 @@ Goals and constraints for remaining sas-mcp-server replacement work.
 
 ## Remaining Capabilities
 
-- Reports and visualization:
-  - list Visual Analytics reports
-  - get report metadata and definition
-  - request report section image rendering
-- Model management and scoring:
-  - list AutoML projects
-  - create and run AutoML projects
-  - list model repository models
-  - list MAS modules
-  - score input data through a MAS module step
-- Prompt workflows:
-  - encode log debugging, dataset exploration, data quality, statistical analysis, code optimization, macro building, and report generation as skill guidance or CLI-friendly templates without reintroducing Python runtime dependencies
- - Workflow orchestration:
-   - add a Compute-based `viya-cli workflow` command with serial/parallel nested arrays, user-level pre/post/autoexec support, schema docs, and agent-friendly examples
+- CLI exposure for the new root-package reports and model management helpers:
+  - list/get Visual Analytics reports and create report image jobs from `viya-cli`
+  - list/create/run AutoML projects, list model repository models, list MAS modules, and score MAS module steps from `viya-cli`
 
 ## Constraints
 
@@ -44,3 +33,6 @@ Goals and constraints for remaining sas-mcp-server replacement work.
 - Submit, list, inspect, cancel, and retrieve logs for Job Execution jobs through `viya-cli jobs ...`.
 - Validate and run Compute-based workflow plans through `viya-cli workflow ...`.
 - Provide an agent skill guide that uses `viya-cli` instead of an MCP service.
+- List Visual Analytics reports, get report metadata/definition, and create report image jobs through root `viya` package (`reports.go`).
+- List AutoML projects, create/run AutoML projects, list registered models, list MAS modules, and score MAS module steps through root `viya` package (`models.go`).
+- Document prompt workflows (debug log, dataset exploration, data quality, statistical analysis, code optimization, macro building, report generation) as agent skills in `SKILLS.md`.
