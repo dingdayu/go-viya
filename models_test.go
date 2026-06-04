@@ -139,7 +139,7 @@ func TestRunMLProjectGetsAndPutsWithRetrainAction(t *testing.T) {
 			}
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Etag", `"abc"`)
-			_, _ = w.Write([]byte(`{"id":"project 1","name":"Churn"}`))
+			_, _ = w.Write([]byte(`{"id":"project 1","name":"Churn","dataTableUri":"/dataTables/dataSources/cas~fs~cas/tables/HMEQ","settings":{"autoRun":true,"numberOfModels":5},"analyticsProjectAttributes":{"targetVariable":"BAD","targetLevel":"binary"}}`))
 		case http.MethodPut:
 			if got, want := r.URL.Query().Get("action"), "retrainProject"; got != want {
 				t.Fatalf("action = %q, want %q", got, want)
@@ -149,6 +149,19 @@ func TestRunMLProjectGetsAndPutsWithRetrainAction(t *testing.T) {
 			}
 			if got, want := r.Header.Get("Accept-Language"), "en"; got != want {
 				t.Fatalf("Accept-Language = %q, want %q", got, want)
+			}
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("Decode() error = %v", err)
+			}
+			if got, want := body["dataTableUri"], "/dataTables/dataSources/cas~fs~cas/tables/HMEQ"; got != want {
+				t.Fatalf("dataTableUri = %q, want %q", got, want)
+			}
+			if _, ok := body["settings"].(map[string]any); !ok {
+				t.Fatalf("settings = %#v, want object", body["settings"])
+			}
+			if _, ok := body["analyticsProjectAttributes"].(map[string]any); !ok {
+				t.Fatalf("analyticsProjectAttributes = %#v, want object", body["analyticsProjectAttributes"])
 			}
 			w.WriteHeader(http.StatusNoContent)
 		default:
@@ -233,11 +246,20 @@ func TestGetModelsAndDecisionsRequestsMASModules(t *testing.T) {
 	}
 }
 
-func TestNewScoreDataRequestConvertsMap(t *testing.T) {
-	req := NewScoreDataRequest(map[string]any{"age": 35, "income": 50000})
+func TestNewScoreDataRequestPreservesInputOrder(t *testing.T) {
+	req := NewScoreDataRequest(
+		ScoreInput{Name: "income", Value: 50000},
+		ScoreInput{Name: "age", Value: 35},
+	)
 
 	if got, want := len(req.Inputs), 2; got != want {
 		t.Fatalf("len(Inputs) = %d, want %d", got, want)
+	}
+	if got, want := req.Inputs[0].Name, "income"; got != want {
+		t.Fatalf("Inputs[0].Name = %q, want %q", got, want)
+	}
+	if got, want := req.Inputs[1].Name, "age"; got != want {
+		t.Fatalf("Inputs[1].Name = %q, want %q", got, want)
 	}
 }
 

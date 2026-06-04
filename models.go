@@ -2,6 +2,7 @@ package viya
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"time"
@@ -122,12 +123,8 @@ func NewCreateMLProjectRequest(projectName string, dataTableURI string, targetVa
 	}
 }
 
-// NewScoreDataRequest converts a map of input values into the MAS scoring request shape.
-func NewScoreDataRequest(inputData map[string]any) ScoreDataRequest {
-	inputs := make([]ScoreInput, 0, len(inputData))
-	for name, value := range inputData {
-		inputs = append(inputs, ScoreInput{Name: name, Value: value})
-	}
+// NewScoreDataRequest builds a MAS scoring request from inputs in step signature order.
+func NewScoreDataRequest(inputs ...ScoreInput) ScoreDataRequest {
 	return ScoreDataRequest{Inputs: inputs}
 }
 
@@ -192,11 +189,12 @@ func (c *Client) RunMLProject(ctx context.Context, projectID string) (resp MLPro
 	ctx, span := tracer.Start(ctx, "RunMLProject")
 	defer span.End()
 
+	var projectPayload json.RawMessage
 	projectPath := fmt.Sprintf("/mlPipelineAutomation/projects/%s", url.PathEscape(projectID))
 	getResp, err := c.client.R().
 		SetContext(ctx).
 		SetHeader("Accept", AcceptMLProject).
-		SetResult(&resp).
+		SetResult(&projectPayload).
 		Get(projectPath)
 	if err != nil {
 		return resp, err
@@ -205,6 +203,10 @@ func (c *Client) RunMLProject(ctx context.Context, projectID string) (resp MLPro
 		span.SetStatus(codes.Error, getResp.String())
 		return resp, fmt.Errorf("failed to get ML project, status code: %d", getResp.StatusCode())
 	}
+	if err := json.Unmarshal(projectPayload, &resp); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return resp, fmt.Errorf("failed to decode ML project: %w", err)
+	}
 
 	putReq := c.client.R().
 		SetContext(ctx).
@@ -212,7 +214,7 @@ func (c *Client) RunMLProject(ctx context.Context, projectID string) (resp MLPro
 		SetHeader("Accept-Language", "en").
 		SetContentType(AcceptMLProject).
 		SetQueryParam("action", "retrainProject").
-		SetBody(resp).
+		SetBody(projectPayload).
 		SetResult(&resp)
 	if etag := getResp.Header().Get("etag"); etag != "" {
 		putReq.SetHeader("If-Match", etag)
