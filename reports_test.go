@@ -142,7 +142,7 @@ func TestGetReportImageCreatesJob(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"id":"job-1","state":"running"}`))
+		_, _ = w.Write([]byte(`{"id":"job-1","state":"completed","images":[{"sectionIndex":2,"sectionName":"vi6","sectionLabel":"Page 1","elementName":"ve41","visualType":"Table","size":"800x600","state":"completed","links":[{"method":"GET","rel":"image","href":"/reportImages/images/image-1.svg","uri":"/reportImages/images/image-1.svg","type":"image/svg+xml"}]}]}`))
 	}))
 	defer server.Close()
 
@@ -158,6 +158,21 @@ func TestGetReportImageCreatesJob(t *testing.T) {
 	}
 	if got, want := job.ID, "job-1"; got != want {
 		t.Fatalf("ID = %q, want %q", got, want)
+	}
+	if got, want := len(job.Images), 1; got != want {
+		t.Fatalf("len(Images) = %d, want %d", got, want)
+	}
+	if got, want := job.Images[0].SectionIndex, 2; got != want {
+		t.Fatalf("Images[0].SectionIndex = %d, want %d", got, want)
+	}
+	if got, want := job.Images[0].SectionLabel, "Page 1"; got != want {
+		t.Fatalf("Images[0].SectionLabel = %q, want %q", got, want)
+	}
+	if got, want := job.Images[0].Links[0].Rel, "image"; got != want {
+		t.Fatalf("Images[0].Links[0].Rel = %q, want %q", got, want)
+	}
+	if got, want := job.Images[0].Links[0].Href, "/reportImages/images/image-1.svg"; got != want {
+		t.Fatalf("Images[0].Links[0].Href = %q, want %q", got, want)
 	}
 }
 

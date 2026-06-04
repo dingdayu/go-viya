@@ -46,6 +46,20 @@ type ReportImageJob struct {
 	ModifiedBy        string    `json:"modifiedBy,omitempty"`
 	ModifiedTimeStamp time.Time `json:"modifiedTimeStamp,omitempty"`
 	Version           int       `json:"version,omitempty"`
+	Images            []ReportImage
+	Links             []Link `json:"links,omitempty"`
+}
+
+// ReportImage describes one rendered Visual Analytics report image result.
+type ReportImage struct {
+	SectionIndex      int       `json:"sectionIndex"`
+	SectionName       string    `json:"sectionName,omitempty"`
+	SectionLabel      string    `json:"sectionLabel,omitempty"`
+	ElementName       string    `json:"elementName,omitempty"`
+	ModifiedTimeStamp time.Time `json:"modifiedTimeStamp,omitempty"`
+	VisualType        string    `json:"visualType,omitempty"`
+	Size              string    `json:"size,omitempty"`
+	State             string    `json:"state,omitempty"`
 	Links             []Link    `json:"links,omitempty"`
 }
 
