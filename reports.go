@@ -141,7 +141,7 @@ func (c *Client) GetReportImage(ctx context.Context, reportID string, opts Repor
 	defer span.End()
 
 	req := reportImageJobRequest{
-		ReportURI:     fmt.Sprintf("/reports/reports/%s", reportID),
+		ReportURI:     fmt.Sprintf("/reports/reports/%s", url.PathEscape(reportID)),
 		LayoutType:    defaultString(opts.LayoutType, "thumbnail"),
 		SelectionType: defaultString(opts.SelectionType, "perSection"),
 		SectionIndex:  opts.SectionIndex,

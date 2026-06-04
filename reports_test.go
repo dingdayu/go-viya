@@ -128,7 +128,7 @@ func TestGetReportImageCreatesJob(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Fatalf("Decode() error = %v", err)
 		}
-		if got, want := body["reportUri"], "/reports/reports/report-1"; got != want {
+		if got, want := body["reportUri"], "/reports/reports/folder%2Freport%201"; got != want {
 			t.Fatalf("reportUri = %q, want %q", got, want)
 		}
 		if got, want := body["layoutType"], "thumbnail"; got != want {
@@ -152,7 +152,7 @@ func TestGetReportImageCreatesJob(t *testing.T) {
 	}
 	client := NewClient(t.Context(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
 
-	job, err := client.GetReportImage(t.Context(), "report-1", ReportImageOptions{SectionIndex: 2})
+	job, err := client.GetReportImage(t.Context(), "folder/report 1", ReportImageOptions{SectionIndex: 2})
 	if err != nil {
 		t.Fatalf("GetReportImage() error = %v", err)
 	}
