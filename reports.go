@@ -118,7 +118,7 @@ func (c *Client) GetReport(ctx context.Context, reportID string) (resp ReportDef
 		SetContext(ctx).
 		SetHeader("Accept", AcceptJSONError).
 		SetResult(&definition).
-		Get(fmt.Sprintf("/reports/%s/content", url.PathEscape(reportID)))
+		Get(fmt.Sprintf("/reports/reports/%s/content", url.PathEscape(reportID)))
 	if err != nil {
 		return resp, err
 	}

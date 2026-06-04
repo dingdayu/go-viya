@@ -64,7 +64,7 @@ func TestGetReportEscapesIDAndReturnsDefinition(t *testing.T) {
 		switch r.RequestURI {
 		case "/reports/reports/report%201":
 			_, _ = w.Write([]byte(`{"id":"report 1","name":"My Report"}`))
-		case "/reports/report%201/content":
+		case "/reports/reports/report%201/content":
 			_, _ = w.Write([]byte(`{"layout":"single","sections":[{"name":"Overview"}]}`))
 		default:
 			t.Fatalf("request URI = %q, want report metadata or content endpoint", r.RequestURI)
@@ -92,7 +92,7 @@ func TestGetReportEscapesIDAndReturnsDefinition(t *testing.T) {
 	if got, want := definition["layout"], "single"; got != want {
 		t.Fatalf("definition.layout = %q, want %q", got, want)
 	}
-	if got, want := calls, []string{"GET /reports/reports/report%201", "GET /reports/report%201/content"}; !stringSlicesEqual(got, want) {
+	if got, want := calls, []string{"GET /reports/reports/report%201", "GET /reports/reports/report%201/content"}; !stringSlicesEqual(got, want) {
 		t.Fatalf("calls = %v, want %v", got, want)
 	}
 }
