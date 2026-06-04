@@ -142,7 +142,7 @@ func (c *Client) GetReportImage(ctx context.Context, reportID string, opts Repor
 
 	req := reportImageJobRequest{
 		ReportURI:     fmt.Sprintf("/reports/reports/%s", url.PathEscape(reportID)),
-		LayoutType:    defaultString(opts.LayoutType, "thumbnail"),
+		LayoutType:    defaultReportImageLayoutType(opts),
 		SelectionType: defaultString(opts.SelectionType, "perSection"),
 		SectionIndex:  opts.SectionIndex,
 		Size:          defaultString(opts.Size, "800x600"),
@@ -172,6 +172,16 @@ func defaultString(value string, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func defaultReportImageLayoutType(opts ReportImageOptions) string {
+	if opts.LayoutType != "" {
+		return opts.LayoutType
+	}
+	if opts.SectionIndex != 0 {
+		return "entireSection"
+	}
+	return "thumbnail"
 }
 
 func defaultReportRenderLimit(value int) int {

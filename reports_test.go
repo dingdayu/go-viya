@@ -131,7 +131,7 @@ func TestGetReportImageCreatesJob(t *testing.T) {
 		if got, want := body["reportUri"], "/reports/reports/folder%2Freport%201"; got != want {
 			t.Fatalf("reportUri = %q, want %q", got, want)
 		}
-		if got, want := body["layoutType"], "thumbnail"; got != want {
+		if got, want := body["layoutType"], "entireSection"; got != want {
 			t.Fatalf("layoutType = %q, want %q", got, want)
 		}
 		if got, want := body["sectionIndex"], float64(2); got != want {
@@ -173,6 +173,33 @@ func TestGetReportImageCreatesJob(t *testing.T) {
 	}
 	if got, want := job.Images[0].Links[0].Href, "/reportImages/images/image-1.svg"; got != want {
 		t.Fatalf("Images[0].Links[0].Href = %q, want %q", got, want)
+	}
+}
+
+func TestGetReportImageDefaultsToThumbnailWithoutSectionIndex(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("Decode() error = %v", err)
+		}
+		if got, want := body["layoutType"], "thumbnail"; got != want {
+			t.Fatalf("layoutType = %q, want %q", got, want)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"job-1","state":"running"}`))
+	}))
+	defer server.Close()
+
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() error = %v", err)
+	}
+	client := NewClient(t.Context(), WithBaseURL(u), WithTokenProvider(staticTokenProvider("token-value")))
+
+	_, err = client.GetReportImage(t.Context(), "report-1", ReportImageOptions{})
+	if err != nil {
+		t.Fatalf("GetReportImage() error = %v", err)
 	}
 }
 
