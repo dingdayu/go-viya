@@ -30,7 +30,7 @@ type ReportDefinitionResponse map[string]any
 
 // ReportImageOptions configures Visual Analytics report image rendering.
 type ReportImageOptions struct {
-	SectionIndex  int
+	SectionIndex  *int
 	Size          string
 	LayoutType    string
 	SelectionType string
@@ -144,7 +144,7 @@ func (c *Client) GetReportImage(ctx context.Context, reportID string, opts Repor
 		ReportURI:     fmt.Sprintf("/reports/reports/%s", url.PathEscape(reportID)),
 		LayoutType:    defaultReportImageLayoutType(opts),
 		SelectionType: defaultString(opts.SelectionType, "perSection"),
-		SectionIndex:  opts.SectionIndex,
+		SectionIndex:  defaultReportImageSectionIndex(opts),
 		Size:          defaultString(opts.Size, "800x600"),
 		RenderLimit:   defaultReportRenderLimit(opts.RenderLimit),
 	}
@@ -178,10 +178,17 @@ func defaultReportImageLayoutType(opts ReportImageOptions) string {
 	if opts.LayoutType != "" {
 		return opts.LayoutType
 	}
-	if opts.SectionIndex != 0 {
+	if opts.SectionIndex != nil {
 		return "entireSection"
 	}
 	return "thumbnail"
+}
+
+func defaultReportImageSectionIndex(opts ReportImageOptions) int {
+	if opts.SectionIndex != nil {
+		return *opts.SectionIndex
+	}
+	return 0
 }
 
 func defaultReportRenderLimit(value int) int {
