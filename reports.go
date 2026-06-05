@@ -126,6 +126,9 @@ func (c *Client) GetReport(ctx context.Context, reportID string) (resp ReportDef
 		span.SetStatus(codes.Error, contentResp.String())
 		return resp, fmt.Errorf("failed to get report content, status code: %d", contentResp.StatusCode())
 	}
+	if resp == nil {
+		return resp, fmt.Errorf("failed to decode report metadata: empty response")
+	}
 	resp["definition"] = definition
 
 	return resp, nil
