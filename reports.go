@@ -39,15 +39,15 @@ type ReportImageOptions struct {
 
 // ReportImageJob describes a Visual Analytics report image rendering job.
 type ReportImageJob struct {
-	ID                string    `json:"id"`
-	State             string    `json:"state,omitempty"`
-	CreatedBy         string    `json:"createdBy,omitempty"`
-	CreationTimeStamp time.Time `json:"creationTimeStamp,omitempty"`
-	ModifiedBy        string    `json:"modifiedBy,omitempty"`
-	ModifiedTimeStamp time.Time `json:"modifiedTimeStamp,omitempty"`
-	Version           int       `json:"version,omitempty"`
-	Images            []ReportImage
-	Links             []Link `json:"links,omitempty"`
+	ID                string        `json:"id"`
+	State             string        `json:"state,omitempty"`
+	CreatedBy         string        `json:"createdBy,omitempty"`
+	CreationTimeStamp time.Time     `json:"creationTimeStamp,omitempty"`
+	ModifiedBy        string        `json:"modifiedBy,omitempty"`
+	ModifiedTimeStamp time.Time     `json:"modifiedTimeStamp,omitempty"`
+	Version           int           `json:"version,omitempty"`
+	Images            []ReportImage `json:"images,omitempty"`
+	Links             []Link        `json:"links,omitempty"`
 }
 
 // ReportImage describes one rendered Visual Analytics report image result.
