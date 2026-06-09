@@ -244,6 +244,16 @@ Current implemented areas include:
 - Job Execution:
   - Submit SAS code as an asynchronous Job Execution job.
   - List, inspect, cancel, and retrieve logs for Job Execution jobs.
+- Reports:
+  - List Visual Analytics reports.
+  - Get report metadata and definition.
+  - Create report section image rendering jobs.
+- Model Management:
+  - List AutoML pipeline automation projects.
+  - Create and run AutoML pipeline automation projects.
+  - List registered models in the model repository.
+  - List published MAS modules (models and decisions).
+  - Score data through a MAS module step.
 - Observability:
   - OpenTelemetry spans for outbound token requests and client operations.
 
