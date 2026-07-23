@@ -41,7 +41,7 @@ func (c *Client) GetBatchFileSetsList(ctx context.Context) (resp BatchFileSetsRe
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get batch file sets, status code: %d", r.StatusCode())
 	}
@@ -66,7 +66,7 @@ func (c *Client) GetBatchFileSetsInfo(ctx context.Context, id string) (resp Batc
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get batch file sets, status code: %d", r.StatusCode())
 	}
@@ -95,7 +95,7 @@ func (c *Client) CreateBatchFileSet(ctx context.Context, contextId string) (resp
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to create batch file set, status code: %d", r.StatusCode())
 	}
@@ -123,7 +123,7 @@ func (c *Client) DeleteBatchFileSet(ctx context.Context, fileSetId string) (err 
 		return err
 	}
 
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		statusCode := r.StatusCode()
 		rawBody := r.String()
 

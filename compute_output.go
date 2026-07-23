@@ -40,7 +40,7 @@ func (c *Client) getComputeLogLines(ctx context.Context, spanName string, path s
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("%s, status code: %d", operation, r.StatusCode())
 	}
@@ -59,7 +59,7 @@ func (c *Client) getComputeText(ctx context.Context, spanName string, path strin
 	if err != nil {
 		return "", err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return "", fmt.Errorf("%s, status code: %d", operation, r.StatusCode())
 	}

@@ -50,7 +50,7 @@ func (c *Client) GetFiles(ctx context.Context, opts FileListOptions) (resp ViyaF
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get files, status code: %d", r.StatusCode())
 	}
@@ -83,7 +83,7 @@ func (c *Client) UploadFileFromReader(ctx context.Context, fileName string, cont
 	if err != nil {
 		return resp, err
 	}
-	if !httpResp.IsSuccess() {
+	if !httpResp.IsStatusSuccess() {
 		span.SetStatus(codes.Error, httpResp.String())
 		return resp, fmt.Errorf("failed to upload file, status code: %d", httpResp.StatusCode())
 	}
@@ -107,7 +107,7 @@ func (c *Client) DownloadFile(ctx context.Context, fileID string) (content []byt
 	if err != nil {
 		return nil, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return nil, fmt.Errorf("failed to download file, status code: %d", r.StatusCode())
 	}

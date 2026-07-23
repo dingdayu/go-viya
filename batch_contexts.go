@@ -57,7 +57,7 @@ func (c *Client) GetBatchContexts(ctx context.Context) (resp BatchContextsRespon
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get batch contexts, status code: %d", r.StatusCode())
 	}
@@ -79,7 +79,7 @@ func (c *Client) GetBatchContextByName(ctx context.Context, name string) (resp B
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get batch context by name, status code: %d", r.StatusCode())
 	}

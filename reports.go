@@ -83,7 +83,7 @@ func (c *Client) GetReports(ctx context.Context, opts ListOptions) (resp Reports
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get reports, status code: %d", r.StatusCode())
 	}
@@ -108,7 +108,7 @@ func (c *Client) GetReport(ctx context.Context, reportID string) (resp ReportDef
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get report, status code: %d", r.StatusCode())
 	}
@@ -122,7 +122,7 @@ func (c *Client) GetReport(ctx context.Context, reportID string) (resp ReportDef
 	if err != nil {
 		return resp, err
 	}
-	if !contentResp.IsSuccess() {
+	if !contentResp.IsStatusSuccess() {
 		span.SetStatus(codes.Error, contentResp.String())
 		return resp, fmt.Errorf("failed to get report content, status code: %d", contentResp.StatusCode())
 	}
@@ -162,7 +162,7 @@ func (c *Client) GetReportImage(ctx context.Context, reportID string, opts Repor
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get report image, status code: %d", r.StatusCode())
 	}
