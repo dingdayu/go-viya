@@ -48,7 +48,7 @@ func (c *Client) LoadCASTableToMemory(ctx context.Context, serverID string, casl
 		return err
 	}
 
-	if !resp.IsSuccess() {
+	if !resp.IsStatusSuccess() {
 		span.SetStatus(codes.Error, resp.String())
 		return fmt.Errorf("failed to load CAS table to memory, status code: %d", resp.StatusCode())
 	}
@@ -83,7 +83,7 @@ func (c *Client) UnloadCASTableFromMemory(ctx context.Context, serverID string, 
 		return err
 	}
 
-	if !resp.IsSuccess() {
+	if !resp.IsStatusSuccess() {
 		span.SetStatus(codes.Error, resp.String())
 		return fmt.Errorf("failed to unload CAS table from memory, status code: %d, body: %s", resp.StatusCode(), resp.String())
 	}

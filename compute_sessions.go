@@ -62,7 +62,7 @@ func (c *Client) CreateComputeSession(ctx context.Context, contextID string, req
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to create compute session, status code: %d", r.StatusCode())
 	}
@@ -84,7 +84,7 @@ func (c *Client) GetComputeSessionsList(ctx context.Context) (resp ComputeSessio
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get compute sessions, status code: %d", r.StatusCode())
 	}
@@ -109,7 +109,7 @@ func (c *Client) GetComputeSessionInfo(ctx context.Context, sessionId string) (r
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get compute session info, status code: %d", r.StatusCode())
 	}
@@ -133,7 +133,7 @@ func (c *Client) DeleteComputeSession(ctx context.Context, sessionId string) (er
 	if err != nil {
 		return err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return fmt.Errorf("failed to delete compute session, status code: %d", r.StatusCode())
 	}
@@ -157,7 +157,7 @@ func (c *Client) GetComputeSessionState(ctx context.Context, sessionId string) (
 	if err != nil {
 		return "", err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return "", fmt.Errorf("failed to get compute session state, status code: %d", r.StatusCode())
 	}
@@ -188,7 +188,7 @@ func (c *Client) SetComputeSessionState(ctx context.Context, sessionId string, s
 	if err != nil {
 		return "", err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return "", fmt.Errorf("failed to set compute session state, status code: %d", r.StatusCode())
 	}

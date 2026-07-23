@@ -49,7 +49,7 @@ func (c *Client) GetBatchJobsList(ctx context.Context) (resp BatchJobsResponse, 
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get batch jobs, status code: %d", r.StatusCode())
 	}
@@ -73,7 +73,7 @@ func (c *Client) GetBatchJobInfo(ctx context.Context, jobID string) (resp BatchJ
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get batch job info, status code: %d", r.StatusCode())
 	}
@@ -121,7 +121,7 @@ func (c *Client) CreateBatchJob(ctx context.Context, req SubmitBatchJobRequest) 
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to create batch job, status code: %d", r.StatusCode())
 	}
@@ -145,7 +145,7 @@ func (c *Client) DeleteBatchJob(ctx context.Context, jobID string) (err error) {
 	if err != nil {
 		return err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return fmt.Errorf("failed to delete batch job, status code: %d, body: %s", r.StatusCode(), r.String())
 	}
@@ -180,7 +180,7 @@ func (c *Client) SendBatchJobInput(ctx context.Context, jobID string, input []st
 	if err != nil {
 		return err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return fmt.Errorf("failed to send batch job input, status code: %d", r.StatusCode())
 	}
@@ -212,7 +212,7 @@ func (c *Client) GetBatchJobOutput(ctx context.Context, jobID string) (resp Batc
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get batch job output, status code: %d", r.StatusCode())
 	}
@@ -236,7 +236,7 @@ func (c *Client) GetBatchJobState(ctx context.Context, jobID string) (state stri
 	if err != nil {
 		return "", err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return "", fmt.Errorf("failed to get batch job state, status code: %d", r.StatusCode())
 	}
@@ -261,7 +261,7 @@ func (c *Client) CancelBatchJob(ctx context.Context, jobID string) (err error) {
 	if err != nil {
 		return err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return fmt.Errorf("failed to cancel batch job, status code: %d", r.StatusCode())
 	}

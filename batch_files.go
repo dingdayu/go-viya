@@ -44,7 +44,7 @@ func (c *Client) GetBatchFile(ctx context.Context, fileSetId string) (resp Batch
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get batch file set files, status code: %d", r.StatusCode())
 	}
@@ -69,7 +69,7 @@ func (c *Client) GetBatchFileInfo(ctx context.Context, fileSetId string, fileNam
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get batch file info, status code: %d", r.StatusCode())
 	}
@@ -93,7 +93,7 @@ func (c *Client) DownloadBatchFile(ctx context.Context, fileSetId string, fileNa
 	if err != nil {
 		return nil, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return nil, fmt.Errorf("failed to download batch file, status code: %d", r.StatusCode())
 	}
@@ -156,7 +156,7 @@ func (c *Client) uploadBatchFileFromReader(ctx context.Context, fileSetId string
 	if err != nil {
 		return err
 	}
-	if !resp.IsSuccess() {
+	if !resp.IsStatusSuccess() {
 		return fmt.Errorf("failed to upload batch file, status code: %d", resp.StatusCode())
 	}
 

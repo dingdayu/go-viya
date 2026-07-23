@@ -139,7 +139,7 @@ func (c *Client) GetMLProjects(ctx context.Context, opts ListOptions) (resp MLPr
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get ML projects, status code: %d", r.StatusCode())
 	}
@@ -172,7 +172,7 @@ func (c *Client) CreateMLProject(ctx context.Context, req CreateMLProjectRequest
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to create ML project, status code: %d", r.StatusCode())
 	}
@@ -199,7 +199,7 @@ func (c *Client) RunMLProject(ctx context.Context, projectID string) (resp MLPro
 	if err != nil {
 		return resp, err
 	}
-	if !getResp.IsSuccess() {
+	if !getResp.IsStatusSuccess() {
 		span.SetStatus(codes.Error, getResp.String())
 		return resp, fmt.Errorf("failed to get ML project, status code: %d", getResp.StatusCode())
 	}
@@ -224,7 +224,7 @@ func (c *Client) RunMLProject(ctx context.Context, projectID string) (resp MLPro
 	if err != nil {
 		return resp, err
 	}
-	if !putResp.IsSuccess() {
+	if !putResp.IsStatusSuccess() {
 		span.SetStatus(codes.Error, putResp.String())
 		return resp, fmt.Errorf("failed to run ML project pipeline, status code: %d", putResp.StatusCode())
 	}
@@ -243,7 +243,7 @@ func (c *Client) GetRegisteredModels(ctx context.Context, opts ListOptions) (res
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get registered models, status code: %d", r.StatusCode())
 	}
@@ -262,7 +262,7 @@ func (c *Client) GetModelsAndDecisions(ctx context.Context, opts ListOptions) (r
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get models and decisions, status code: %d", r.StatusCode())
 	}
@@ -292,7 +292,7 @@ func (c *Client) ScoreData(ctx context.Context, moduleID string, stepID string, 
 	if err != nil {
 		return nil, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return nil, fmt.Errorf("failed to score data, status code: %d", r.StatusCode())
 	}

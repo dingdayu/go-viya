@@ -46,7 +46,7 @@ func (c *Client) GetComputeContexts(ctx context.Context) (resp ComputeContextsRe
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get compute contexts, status code: %d", r.StatusCode())
 	}
@@ -71,7 +71,7 @@ func (c *Client) GetComputeContextInfo(ctx context.Context, contextID string) (r
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get compute context info, status code: %d", r.StatusCode())
 	}

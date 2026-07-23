@@ -63,7 +63,7 @@ func (c *Client) UploadCSVToCASTableFromReader(ctx context.Context, serverID str
 	if err != nil {
 		return resp, err
 	}
-	if !httpResp.IsSuccess() {
+	if !httpResp.IsStatusSuccess() {
 		span.SetStatus(codes.Error, httpResp.String())
 		return resp, fmt.Errorf("failed to upload CSV to CAS table, status code: %d", httpResp.StatusCode())
 	}
@@ -98,7 +98,7 @@ func (c *Client) PromoteCASTable(ctx context.Context, serverID string, caslibNam
 	if err != nil {
 		return resp, err
 	}
-	if !httpResp.IsSuccess() {
+	if !httpResp.IsStatusSuccess() {
 		span.SetStatus(codes.Error, httpResp.String())
 		return resp, fmt.Errorf("failed to promote CAS table, status code: %d", httpResp.StatusCode())
 	}

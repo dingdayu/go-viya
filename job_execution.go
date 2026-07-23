@@ -78,7 +78,7 @@ func (c *Client) SubmitJobExecutionCode(ctx context.Context, req SubmitJobExecut
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to submit job execution code, status code: %d", r.StatusCode())
 	}
@@ -103,7 +103,7 @@ func (c *Client) GetJobExecutionJob(ctx context.Context, jobID string) (resp Job
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get job execution job, status code: %d", r.StatusCode())
 	}
@@ -122,7 +122,7 @@ func (c *Client) GetJobExecutionJobs(ctx context.Context, opts ListOptions) (res
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get job execution jobs, status code: %d", r.StatusCode())
 	}
@@ -146,7 +146,7 @@ func (c *Client) CancelJobExecutionJob(ctx context.Context, jobID string) (err e
 	if err != nil {
 		return err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return fmt.Errorf("failed to cancel job execution job, status code: %d", r.StatusCode())
 	}
@@ -184,7 +184,7 @@ func (c *Client) GetJobExecutionJobLog(ctx context.Context, jobID string) (strin
 	if err != nil {
 		return "", err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return "", fmt.Errorf("failed to get job execution job log, status code: %d", r.StatusCode())
 	}

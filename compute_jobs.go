@@ -60,7 +60,7 @@ func (c *Client) CreateComputeJob(ctx context.Context, sessionId string, req Cre
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to create compute job, status code: %d", r.StatusCode())
 	}
@@ -85,7 +85,7 @@ func (c *Client) GetComputeJobsList(ctx context.Context, sessionId string) (resp
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get compute jobs, status code: %d", r.StatusCode())
 	}
@@ -113,7 +113,7 @@ func (c *Client) GetComputeJobInfo(ctx context.Context, sessionId string, jobId 
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get compute job info, status code: %d", r.StatusCode())
 	}
@@ -140,7 +140,7 @@ func (c *Client) DeleteComputeJob(ctx context.Context, sessionId string, jobId s
 	if err != nil {
 		return err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return fmt.Errorf("failed to delete compute job, status code: %d", r.StatusCode())
 	}
@@ -167,7 +167,7 @@ func (c *Client) GetComputeJobState(ctx context.Context, sessionId string, jobId
 	if err != nil {
 		return "", err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return "", fmt.Errorf("failed to get compute job state, status code: %d", r.StatusCode())
 	}
@@ -201,7 +201,7 @@ func (c *Client) SetComputeJobState(ctx context.Context, sessionId string, jobId
 	if err != nil {
 		return "", err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return "", fmt.Errorf("failed to set compute job state, status code: %d", r.StatusCode())
 	}

@@ -88,7 +88,7 @@ func (c *Client) GetCASServers(ctx context.Context, opts ListOptions) (resp CASS
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get CAS servers, status code: %d", r.StatusCode())
 	}
@@ -111,7 +111,7 @@ func (c *Client) GetCASLibs(ctx context.Context, serverID string, opts ListOptio
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get CAS libraries, status code: %d", r.StatusCode())
 	}
@@ -137,7 +137,7 @@ func (c *Client) GetCASTables(ctx context.Context, serverID string, caslibName s
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get CAS tables, status code: %d", r.StatusCode())
 	}
@@ -168,7 +168,7 @@ func (c *Client) GetCASTableInfo(ctx context.Context, serverID string, caslibNam
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get CAS table info, status code: %d", r.StatusCode())
 	}
@@ -197,7 +197,7 @@ func (c *Client) GetCASTableColumns(ctx context.Context, serverID string, caslib
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get CAS table columns, status code: %d", r.StatusCode())
 	}
@@ -236,7 +236,7 @@ func (c *Client) GetCASTableRows(ctx context.Context, serverID string, caslibNam
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get CAS table rows, status code: %d", r.StatusCode())
 	}
@@ -288,7 +288,7 @@ func (c *Client) GetCASTableDataColumns(ctx context.Context, serverID string, ca
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get CAS data table columns, status code: %d", r.StatusCode())
 	}

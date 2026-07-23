@@ -45,7 +45,7 @@ func (c *Client) GetBatchServersList(ctx context.Context) (resp BatchServersResp
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get batch servers, status code: %d", r.StatusCode())
 	}
@@ -70,7 +70,7 @@ func (c *Client) GetBatchServerInfo(ctx context.Context, serverID string) (resp 
 	if err != nil {
 		return resp, err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return resp, fmt.Errorf("failed to get batch server info, status code: %d", r.StatusCode())
 	}
@@ -94,7 +94,7 @@ func (c *Client) DeleteBatchServer(ctx context.Context, serverID string) (err er
 	if err != nil {
 		return err
 	}
-	if !r.IsSuccess() {
+	if !r.IsStatusSuccess() {
 		span.SetStatus(codes.Error, r.String())
 		return fmt.Errorf("failed to delete batch server, status code: %d", r.StatusCode())
 	}

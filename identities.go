@@ -23,7 +23,7 @@ func (c *Client) RefreshIdentitiesCache(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if !resp.IsSuccess() {
+	if !resp.IsStatusSuccess() {
 		span.SetStatus(codes.Error, resp.String())
 		return fmt.Errorf("failed to refresh identities cache, status code: %d", resp.StatusCode())
 	}
@@ -52,7 +52,7 @@ func (c *Client) GetIdentitiesUsers(ctx context.Context) (identitiesUserResp Ide
 	if err != nil {
 		return identitiesUserResp, err
 	}
-	if !resp.IsSuccess() {
+	if !resp.IsStatusSuccess() {
 		span.SetStatus(codes.Error, resp.String())
 		return identitiesUserResp, fmt.Errorf("failed to get identities users, status code: %d", resp.StatusCode())
 	}
@@ -137,7 +137,7 @@ func (c *Client) PatchIdentitiesLDAPUser(ctx context.Context, updates map[string
 	if err != nil {
 		return err
 	}
-	if !response.IsSuccess() {
+	if !response.IsStatusSuccess() {
 		return fmt.Errorf("failed to patch LDAP user, status code: %d", response.StatusCode())
 	}
 	return nil
