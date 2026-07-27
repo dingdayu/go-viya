@@ -49,6 +49,13 @@ This project follows [Semantic Versioning](https://semver.org/).
 * add tests for UploadFile, GetComputeJobsList, GetIdentitiesUsers, GetConfiguration
 * add t.Helper() to test helpers
 
+## [0.8.0](https://github.com/dingdayu/go-viya/compare/v0.7.0...v0.8.0) (2026-07-27)
+
+
+### Features
+
+* add reports and model management helpers ([#22](https://github.com/dingdayu/go-viya/issues/22)) ([df5010c](https://github.com/dingdayu/go-viya/commit/df5010c58aa699dc98943e528e3aeed928dcfb00))
+
 ## [0.7.0](https://github.com/dingdayu/go-viya/compare/v0.6.0...v0.7.0) (2026-05-14)
 
 
