@@ -49,6 +49,31 @@ This project follows [Semantic Versioning](https://semver.org/).
 * add tests for UploadFile, GetComputeJobsList, GetIdentitiesUsers, GetConfiguration
 * add t.Helper() to test helpers
 
+## [0.8.0](https://github.com/dingdayu/go-viya/compare/v0.7.0...v0.8.0) (2026-10-28)
+
+
+### Features
+
+* add reports and model management helpers ([#22](https://github.com/dingdayu/go-viya/issues/22)) ([df5010c](https://github.com/dingdayu/go-viya/commit/df5010c58aa699dc98943e528e3aeed928dcfb00))
+
+
+### Code Refactoring
+
+* remove unused testhelpers_test.go ([6a07158](https://github.com/dingdayu/go-viya/commit/6a071587f32d223f65cf979ac49a6f913d88b1dd))
+
+
+### Miscellaneous Chores
+
+* **ci:** add changelog sections to release-please config ([085aa2a](https://github.com/dingdayu/go-viya/commit/085aa2a235cdb29f13f6762efb99e76bb2d9cd1e))
+* **deps:** bump actions/checkout from 6 to 7 ([#25](https://github.com/dingdayu/go-viya/issues/25)) ([42eacd8](https://github.com/dingdayu/go-viya/commit/42eacd8724aab5ff57f24b5bf18d2655115ceec4))
+* **deps:** bump go.opentelemetry.io/otel from 1.44.0 to 1.45.0 ([#33](https://github.com/dingdayu/go-viya/issues/33)) ([e549aac](https://github.com/dingdayu/go-viya/commit/e549aac6c3c9fce5c0f34fe44a3d667676376783))
+* **deps:** clean up stale go.sum entries after dependency updates ([9279ef3](https://github.com/dingdayu/go-viya/commit/9279ef35e8bbc9d6ec023026ad5a7f2d5b3eea2a))
+* **deps:** update GitHub Actions bot bumps ([#31](https://github.com/dingdayu/go-viya/issues/31)) ([3ac8898](https://github.com/dingdayu/go-viya/commit/3ac8898d471a717a893e70cf7d67ebad35bc3f21))
+* **deps:** update Go dependencies ([#30](https://github.com/dingdayu/go-viya/issues/30)) ([1543a47](https://github.com/dingdayu/go-viya/commit/1543a47c90c4db273a171e4b1b4aa728892e7d90))
+* **deps:** update Go version to 1.26.0 and bump golang.org/x/oauth2 to v0.37.0 ([bedb18c](https://github.com/dingdayu/go-viya/commit/bedb18caabc92a773c0592fd85fa3b6686257133))
+* **deps:** update resty.dev/v3 to v3.0.0-rc.4 and golang.org/x/net to v0.62.0 ([6a1d35e](https://github.com/dingdayu/go-viya/commit/6a1d35e689385191125df2e3bf3ce406403e9086))
+* fix golangci-lint quote style, add package comment, and cleanup tests ([1dd7963](https://github.com/dingdayu/go-viya/commit/1dd7963a71111fa89ca499595697e3f88332ffb1))
+
 ## [0.7.0](https://github.com/dingdayu/go-viya/compare/v0.6.0...v0.7.0) (2026-05-14)
 
 
