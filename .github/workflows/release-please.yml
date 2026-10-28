@@ -25,6 +25,9 @@ jobs:
         id: release
         uses: googleapis/release-please-action@v5
         with:
+          # A user token makes release PR updates trigger CI without manual approval.
+          # Keep GITHUB_TOKEN as a safe fallback while the secret is being configured.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
