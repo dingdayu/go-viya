@@ -4,6 +4,22 @@ This project uses semantic versioning, release-please-compatible commit
 messages, release-please configuration for version and changelog automation, and
 GoReleaser for GitHub Release creation.
 
+## Release Please Credentials
+
+Release Please must use the repository secret `RELEASE_PLEASE_TOKEN` for its
+release pull requests and subsequent updates to trigger CI automatically. Set
+the secret to a fine-grained personal access token owned by a maintainer, scoped
+to this repository, with read and write access to contents and pull requests.
+
+The workflow falls back to the built-in `GITHUB_TOKEN` when the secret is not
+configured so release automation does not fail during setup. GitHub treats
+activity performed with that fallback as workflow-generated activity; CI for a
+release pull request may therefore remain blocked pending manual approval or
+may not be triggered. Do not remove the fallback until the repository secret
+has been verified with a release pull request update.
+
+Never store the token value in the repository, workflow, logs, or examples.
+
 ## Release Notes
 
 Format user-facing changes for GitHub Releases using these categories:
